@@ -1,0 +1,3 @@
+.DS_Store
+# 离线地图瓦片包（1.5GB / 32万文件），不入库；向项目负责人索取后解压到 assets/tiles/DongyingTiles/
+assets/tiles/DongyingTiles/

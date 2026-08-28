@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>无人机融合感知与低空安全管理平台 · Demo</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div id="app">
+  <header class="hdr">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4zM16 16h4v4h-4zM8 6h8M6 8v8M18 8v8M8 18h8M12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>
+      <b>无人机融合感知与低空安全管理平台</b>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span class="it" id="clk"></span>
+      <span class="it" id="wea"></span>
+      <span class="it"><button class="btn demo" id="btnDemo" title="业务演示：按「发现—研判—处置—归档」预设案例逐步演示">▶ 业务演示</button></span>
+      <span class="it"><button class="btn ghost" id="btnBig" title="大屏模式：放大字号与行距，适配指挥大厅显示">⛶ 大屏</button></span>
+      <span class="it bell" id="bell">🔔<span class="dot" id="bellN">0</span></span>
+      <span class="user"><span class="av">管</span>管理员 ▾</span>
+    </div>
+  </header>
+  <div class="body">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+      <div class="crumb" id="crumb"></div>
+      <div class="view" id="view"></div>
+    </main>
+  </div>
+</div>
+<script src="assets/js/vendor/echarts.min.js"></script>
+<script src="assets/js/mock.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/geo.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/video.js"></script>
+<script src="assets/js/case.js"></script>
+<script src="assets/js/pages/overview.js"></script>
+<script src="assets/js/pages/situation.js"></script>
+<script src="assets/js/pages/flights.js"></script>
+<script src="assets/js/pages/legality.js"></script>
+<script src="assets/js/pages/alarms.js"></script>
+<script src="assets/js/pages/risk.js"></script>
+<script src="assets/js/pages/stats.js"></script>
+<script src="assets/js/pages/devices.js"></script>
+<script src="assets/js/pages/commission.js"></script>
+<script src="assets/js/pages/monitor.js"></script>
+<script src="assets/js/pages/apis.js"></script>
+<script src="assets/js/pages/punish.js"></script>
+<script src="assets/js/pages/archive.js"></script>
+<script src="assets/js/pages/users.js"></script>
+<script src="assets/js/pages/evidence.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/demo.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

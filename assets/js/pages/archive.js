@@ -68,12 +68,12 @@
       ${U.field('目标编号', `<input class="ip" id="arTgt" style="width:150px" placeholder="如 UAV20260826001">`)}
       ${U.field('设备编号', `<input class="ip" id="arDev" style="width:150px" placeholder="如 DEV260826001">`)}
       ${U.field('归档状态', U.select('astatus', ['全部', '待归档', '已归档'], st.astatus))}
-      <button class="btn" id="arQ" title="下拉筛选即时生效；三个输入框需点查询或回车才应用">🔍 查询</button>
+      <button class="btn" id="arQ" title="下拉筛选即时生效；三个输入框需点查询或回车才应用">${U.icon('search')} 查询</button>
       <button class="btn" id="arR">重置筛选</button>
       <span style="flex:1"></span>
       <button class="btn warn" id="arBatch" disabled title="请先在列表中勾选待归档记录（仅「待归档」状态可勾选）">▤ 批量归档（<b id="arSelN">0</b>）</button>
-      <button class="btn" id="arExp">⭳ 导出日志</button>
-      <button class="btn ghost" id="arCfg" aria-label="归档策略配置">⚙</button>
+      <button class="btn" id="arExp">${U.icon('download')} 导出日志</button>
+      <button class="btn ghost" id="arCfg" aria-label="归档策略配置">${U.icon('settings')}</button>
     </div></div>
 
     ${U.panel({
@@ -182,22 +182,32 @@
     }
     U.modal({
       title: `日志详情 · ${l.id}`, width: '720px',
-      body: `<div style="display:flex;gap:8px;margin-bottom:12px">${U.tag(l.type, TC[l.type])}${U.tag(l.status, l.status === '待归档' ? 't-amber' : 't-green')}</div>
+      body: `${U.detailHero({
+        icon: 'archive', title: l.summary, subtitle: '审计与日志归档', id: l.id,
+        tags: [U.tag(l.type, TC[l.type]), U.tag(l.status, l.status === '待归档' ? 't-amber' : 't-green')],
+        meta: [['事件时间', l.time], ['关联目标', l.target]]
+      })}
+        ${U.metricStrip([
+          { label: '日志类型', value: l.type, icon: 'archive' },
+          { label: '归档状态', value: l.status, tone: l.status === '已归档' ? 'good' : 'warn', icon: 'folder' },
+          { label: '关联对象', value: l.target || l.device || '—', icon: 'link' },
+          { label: '日志大小', value: l.size, icon: 'file' }
+        ], { compact: true })}
         ${U.kv([['记录编号', `<span class="mono">${l.id}</span>`], ['事件时间', l.time],
       ['归档状态', l.status], ['归档时间', l.status === '已归档' ? M.util.fmtDT(new Date(l.ts + 207000)) : '—'],
-      ['关联目标', l.target], ['关联设备', `${l.deviceName}（${l.device}）`]])}
-        <div style="margin-top:12px">${U.sect('完整日志内容', `<pre class="code" style="max-height:200px">${JSON.stringify(payload(l), null, 2)}</pre>`)}</div>
+      ['关联目标', l.target], ['关联设备', `${l.deviceName}（${l.device}）`]], { surface: true, density: 'compact' })}
+        <div style="margin-top:12px">${U.codeBlock('完整日志内容', JSON.stringify(payload(l), null, 2), { language: 'JSON', maxH: '230px' })}</div>
         ${extra}
-        ${U.sect('附件 (3)', `<div style="display:flex;flex-direction:column;gap:6px">
+        ${U.sect('附件 (3)', `<div class="attachment-list">
           ${[['track_' + l.id.slice(-8) + '.json', '1.24 MB'], ['snapshot_' + l.id.slice(-8) + '.jpg', '512 KB'], ['radar_log_' + l.id.slice(-8) + '.zip', '3.68 MB']]
-        .map(([n, sz]) => `<div style="display:flex;align-items:center;gap:8px;font-size:12px">
-              <span aria-hidden="true">📄</span><span class="lnk" style="flex:1">${n}</span><span style="color:var(--txt-3)">${sz}</span><span class="lnk" aria-label="下载附件">⭳</span></div>`).join('')}</div>`)}
+        .map(([n, sz]) => `<div class="attachment-card">
+              <span aria-hidden="true">${U.icon('file')}</span><span class="lnk" style="flex:1">${n}</span><span style="color:var(--txt-3)">${sz}</span><span class="lnk" aria-label="下载附件">${U.icon('download')}</span></div>`).join('')}</div>`)}
         ${U.sect('操作人信息', U.kv([['操作人', M.PILOTS[rr(0, M.PILOTS.length - 1)]], ['角色', '值班员'],
         ['所属单位', '东营市低空安全管理中心'], ['操作终端', '终端-' + M.util.p2(rr(1, 12))],
         ['日志大小', l.size], ['存证哈希', `<span class="mono" style="font-size:11px">sha256:${l.id.replace(/[^0-9a-z]/gi, '').toLowerCase()}8f2a…</span>`]]))}`,
       footer: `<button class="btn" data-close>关闭</button>
         ${l.status === '待归档' ? `<button class="btn warn" data-act="arch">归档本条</button>` : ''}
-        <button class="btn pri" data-act="down">⭳ 下载完整日志包</button>`,
+        <button class="btn pri" data-act="down">${U.icon('download')} 下载完整日志包</button>`,
       on: {
         down: () => U.toast('已生成日志包（JSON + 轨迹 + 截图 + 审计），共 5.4 MB', 'ok'),
         arch: () => { l.status = '已归档'; U.closeModal(); paint(); U.toast(`「${l.id}」已归档`, 'ok'); }
@@ -285,7 +295,7 @@
       const b = g2('arQ'); if (!b) return;
       const d = dirty();
       b.className = 'btn' + (d ? ' pri' : '');
-      b.textContent = d ? '🔍 查询（有未应用条件）' : '🔍 查询';
+      b.innerHTML = `${U.icon('search')} ${d ? '查询（有未应用条件）' : '查询'}`;
       b.title = d ? '点击应用输入框中的检索条件' : '输入框条件已全部应用；下拉筛选即时生效，无需点查询';
     }
     const doQuery = () => {

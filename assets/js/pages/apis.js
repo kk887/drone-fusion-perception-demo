@@ -221,14 +221,14 @@
       ${U.panel({
       title: false, style: 'flex:1.55', nopad: true,
       body: `<div class="toolbar">
-          <button class="btn pri" id="apAdd">＋ 新增接口</button>
-          <button class="btn" id="apTest">🔗 联调测试</button>
-          <button class="btn" id="apDoc">📄 查看文档</button>
-          <button class="btn" id="apExp">⭳ 导出配置</button>
-          <button class="btn" id="apLedger">▤ 字段映射台账</button>
-          <button class="btn" id="apVer">⛃ 版本与冻结</button>
-          <button class="btn warn" id="apCheck">✓ 接口一致性校验</button>
-          ${canSeeSelfCheck() ? `<button class="btn warn" id="apSelf">✓ 数据一致性自检</button>` : ''}
+          <button class="btn pri" id="apAdd">${U.icon('plus')} 新增接口</button>
+          <button class="btn" id="apTest">${U.icon('link')} 联调测试</button>
+          <button class="btn" id="apDoc">${U.icon('file')} 查看文档</button>
+          <button class="btn" id="apExp">${U.icon('download')} 导出配置</button>
+          <button class="btn" id="apLedger">${U.icon('list')} 字段映射台账</button>
+          <button class="btn" id="apVer">${U.icon('database')} 版本与冻结</button>
+          <button class="btn warn" id="apCheck">${U.icon('check')} 接口一致性校验</button>
+          ${canSeeSelfCheck() ? `<button class="btn warn" id="apSelf">${U.icon('check')} 数据一致性自检</button>` : ''}
           <span style="flex:1"></span>
           ${dsChip()}
           <input class="ip" id="apKw" style="width:190px" placeholder="请输入接口名称或地址搜索">
@@ -274,7 +274,7 @@
            · D4 需接口负责人签字确认后冻结`;
     return `<div style="display:flex;align-items:center;gap:9px;padding:6px 12px;font-size:12px;
         border-bottom:1px solid var(--line-2);background:${c}12;flex-wrap:wrap">
-      <span>${t.pending ? '⚠' : t.frozen ? '🔒' : '🔓'}</span>
+      <span>${U.icon(t.pending ? 'warning' : t.frozen ? 'lock' : 'unlock')}</span>
       ${ledgerTag()}
       <span style="color:var(--txt-3)">${info}</span>
       <span style="flex:1;min-width:8px"></span>
@@ -304,8 +304,8 @@
             <td style="width:78px"><div style="white-space:normal;line-height:1.4;font-size:11.5px">${i.auth}</div></td>
             <td style="width:70px">${U.tag(i.status)}${frzOf(i)
               ? (frzOf(i).status === '已冻结'
-                ? ' <span title="已冻结 ' + frzOf(i).no + ' · 冻结版本 ' + frzOf(i).ver + ' · ' + frzOf(i).signs.map(x => x.name).join('/') + ' ' + frzOf(i).at + '">🔒</span>'
-                : ' <span title="' + frzOf(i).pending + '">⚠</span>') : ''}</td>
+                ? ' <span title="已冻结 ' + frzOf(i).no + ' · 冻结版本 ' + frzOf(i).ver + ' · ' + frzOf(i).signs.map(x => x.name).join('/') + ' ' + frzOf(i).at + '">' + U.icon('lock') + '</span>'
+                : ' <span title="' + frzOf(i).pending + '">' + U.icon('warning') + '</span>') : ''}</td>
             <td style="width:66px" class="num">${i.rate}%</td>
             <td style="width:96px" class="num" style="font-size:11px">
               <div>${String(i.last).slice(0, 10)}</div>
@@ -323,7 +323,16 @@
     document.getElementById('apTitle').textContent = i.name;
     document.getElementById('apSt').innerHTML = U.tag(i.status) + (i.mock ? ' ' + U.tag('Mock', 't-amber') : '');
     if (tab === 'detail') {
-      return U.kv([['接口分组', i.group], ['接口类型', i.kind], ['请求方式', i.method],
+      return U.detailHero({
+        icon: 'api', subtitle: '接口详情', title: i.name, id: i.method + ' ' + i.url,
+        tags: [U.tag(i.status), i.mock ? U.tag('Mock', 't-amber') : U.tag('正式接口', 't-green')],
+        meta: [['分组', i.group], ['版本', i.ver]]
+      }) + U.metricStrip([
+        { label: '接口状态', value: i.status, tone: i.status === '正常' ? 'good' : 'bad', icon: 'api' },
+        { label: '请求方式', value: i.method, icon: 'link' },
+        { label: '成功率', value: i.rate, unit: '%', tone: i.rate >= 99 ? 'good' : i.rate >= 95 ? 'warn' : 'bad', icon: 'chart' },
+        { label: '平均响应', value: i.rt, unit: 'ms', tone: i.rt <= 200 ? 'good' : 'warn', icon: 'clock' }
+      ], { compact: true }) + U.kv([['接口分组', i.group], ['接口类型', i.kind], ['请求方式', i.method],
       ['接口地址', `<span class="mono">${i.url}</span>`], ['鉴权方式', i.auth],
       ['接口版本', `<b class="mono">${i.ver}</b>　<span class="lnk" data-verlink>变更记录 (${history(i).length}) ›</span>`
         + (brkCount(i) ? `　${U.tag('破坏性变更 ' + brkCount(i) + ' 次', 't-red')}` : '')],
@@ -340,9 +349,8 @@
       ['来源系统', i.src], ['责任方', i.owner],
       ['当前状态', U.tag(i.status)], ['今日调用', U.num(i.calls) + ' 次'], ['成功率', i.rate + '%'],
       ['平均响应', i.rt + ' ms'], ['最近调用', i.last],
-      ['实现方式', i.mock ? '<span class="tag t-amber">Mock（待替换为正式接口）</span>' : '<span class="tag t-green">正式接口</span>']])
-        + U.sect('请求参数', `<pre class="code">${JSON.stringify(reqSchema(i), null, 2)}</pre>`)
-        + U.sect('响应示例', `<pre class="code">${JSON.stringify(resSample(i), null, 2)}</pre>`);
+      ['实现方式', i.mock ? '<span class="tag t-amber">Mock（待替换为正式接口）</span>' : '<span class="tag t-green">正式接口</span>']], { surface: true, density: 'compact' })
+        + `<div style="display:grid;gap:9px;margin-top:10px">${U.codeBlock('请求参数', JSON.stringify(reqSchema(i), null, 2), { language: 'JSON', maxH: '240px' })}${U.codeBlock('响应示例', JSON.stringify(resSample(i), null, 2), { language: 'JSON', maxH: '220px' })}</div>`;
     }
     if (tab === 'log') {
       const rr = CH.seeded(i.url);           // 确定性:同一接口的日志两次查看一致
@@ -663,7 +671,7 @@
       title: '页面—接口—字段映射台账（F1003）', width: '900px',
       body: `<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;padding:7px 10px;border-radius:6px;
           background:rgba(61,139,255,.08);border:1px solid var(--line-2);font-size:12.5px">
-          <span>${frzStat().frozen ? '🔒' : '🔓'}</span>${ledgerTag()}
+          <span>${U.icon(frzStat().frozen ? 'lock' : 'unlock')}</span>${ledgerTag()}
           <span style="color:var(--txt-3)">${frzStat().frozen
         ? '已冻结 ' + frzStat().frozen + '/' + frzStat().total + ' 个接口 · 台账版本 <span class="mono">' + ledgerVer + '</span>'
         : '本台账是 D4 接口冻结的签字底稿：接口负责人签字确认后接口冻结，其后变更须走评审流程。'}</span>
@@ -673,8 +681,8 @@
           <input class="ip" id="ldKw" style="flex:1" placeholder="反查:输入接口地址或字段名,如 authCode / ptz / latitude">
         </div><div id="ldBody">${tbl()}</div>`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn" data-close onclick="UI.toast('台账已导出 Excel,可作为双方接口负责人签字底稿(§8.2)','ok')">⭳ 导出台账</button>
-        <button class="btn pri" data-act="sign">${frzStat().frozen === frzStat().total ? '🔒 查看冻结凭据' : '✍ 整批签字确认并冻结'}</button>`,
+        <button class="btn" data-close onclick="UI.toast('台账已导出 Excel,可作为双方接口负责人签字底稿(§8.2)','ok')">${U.icon('download')} 导出台账</button>
+        <button class="btn pri" data-act="sign">${U.icon(frzStat().frozen === frzStat().total ? 'lock' : 'pen')} ${frzStat().frozen === frzStat().total ? '查看冻结凭据' : '整批签字确认并冻结'}</button>`,
       on: { sign: () => frzStat().frozen === frzStat().total ? freezeModal() : signModal('all') },
       mounted: el => {
         el.querySelector('#ldKw').oninput = e2 => { kw2 = e2.target.value.trim(); el.querySelector('#ldBody').innerHTML = tbl(); };
@@ -723,7 +731,7 @@
         <label class="chk"><input type="checkbox" data-f="c2">② 冻结后任何变更须提交变更登记并由双方评审，不得直接改线上接口</label>
         <label class="chk"><input type="checkbox" data-f="c3">③ 破坏性变更须双方重新签字并升 major 版本</label>`,
       footer: `<button class="btn" data-close>取消</button>
-        <button class="btn pri" data-act="ok">✍ ${re ? '重新签字并恢复冻结' : '签字确认并冻结'}</button>`,
+        <button class="btn pri" data-act="ok">${U.icon('pen')} ${re ? '重新签字并恢复冻结' : '签字确认并冻结'}</button>`,
       on: {
         ok: el => {
           const picks = cands.map((c, k) => {
@@ -774,8 +782,8 @@
       ])}${f.pending ? `<div class="warnbox" style="border-color:rgba(255,77,94,.45);background:rgba(255,77,94,.10);margin-top:10px">
           ${f.pending}</div>` : ''}`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn warn" data-act="un">🔓 申请解冻</button>
-        ${f.pending ? `<button class="btn pri" data-act="re">✍ 重新签字</button>` : ''}`,
+        <button class="btn warn" data-act="un">${U.icon('unlock')} 申请解冻</button>
+        ${f.pending ? `<button class="btn pri" data-act="re">${U.icon('pen')} 重新签字</button>` : ''}`,
       on: { un: () => unfreezeModal(i), re: () => signModal(i) }
     });
   }
@@ -819,8 +827,8 @@
           { t: '说明', w: '300px', render: r => `<div style="white-space:normal;font-size:11.5px;color:var(--txt-3)">${r.reason} · ${r.detail}</div>` }
         ], freezeLog, { maxH: '150px' })) : ''}`,
       footer: `<button class="btn" data-close>关闭</button>
-        ${t.frozen ? `<button class="btn warn" data-act="unall">🔓 整批解冻</button>` : ''}
-        ${t.frozen === t.total && t.total ? '' : `<button class="btn pri" data-act="sign">✍ 整批签字确认并冻结</button>`}`,
+        ${t.frozen ? `<button class="btn warn" data-act="unall">${U.icon('unlock')} 整批解冻</button>` : ''}
+        ${t.frozen === t.total && t.total ? '' : `<button class="btn pri" data-act="sign">${U.icon('pen')} 整批签字确认并冻结</button>`}`,
       on: { sign: () => signModal('all'), unall: () => unfreezeModal('all') },
       mounted: el => el.addEventListener('click', e => {
         const v = e.target.closest('[data-vv]');
@@ -883,7 +891,7 @@
           `<div style="font-size:11.5px;color:var(--txt-3);margin-top:4px">${impactOf(i).elements.join('；')}</div>`
           : '<span style="color:#ffd07a">该接口未出现在附录A 台账中（C09「页面未引用字段」）</span>']])}
         <div style="margin-top:12px">${verList(i)}</div>`,
-      footer: `<button class="btn" data-close>关闭</button><button class="btn pri" data-act="add">＋ 登记变更</button>`,
+      footer: `<button class="btn" data-close>关闭</button><button class="btn pri" data-act="add">${U.icon('plus')} 登记变更</button>`,
       on: { add: () => addChangeModal(i) }
     });
   }
@@ -1268,12 +1276,12 @@
           下列断言在每次打开时<b>实时计算</b>（期望值同样是算出来的，不是写死的常量）——
           写死期望值会出现「期望 100% 实际 100% 却标红」这种自欺的绿灯。</div>
         ${bad.length ? `<div style="margin-top:12px">
-            <div style="font-size:13px;color:#ff96a0;margin-bottom:6px">✗ 未通过 ${bad.length} 条（需先处理）</div>
+            <div class="inline-icon" style="font-size:13px;color:#ff96a0;margin-bottom:6px">${U.icon('cross')} 未通过 ${bad.length} 条（需先处理）</div>
             <div class="scroll" style="max-height:220px;border:1px solid rgba(255,77,94,.3);border-radius:6px">
               <table class="tb"><thead>${head}</thead><tbody>${bad.map(row).join('')}</tbody></table></div>
           </div>` : `<div style="margin-top:12px;padding:9px 11px;border-radius:6px;
             border:1px solid rgba(47,208,110,.35);background:rgba(47,208,110,.08);font-size:12.5px">
-            ✓ 全部 ${list.length} 条断言通过 —— 全站指标口径自洽</div>`}
+            ${U.icon('check')} 全部 ${list.length} 条断言通过 —— 全站指标口径自洽</div>`}
         <div style="margin-top:12px">
           <div id="scToggle" class="lnk" style="font-size:12.5px;user-select:none">▸ 展开已通过的 ${good.length} 条</div>
           <div id="scPass" style="display:none;margin-top:6px">
@@ -1285,7 +1293,7 @@
           可见性：按「用户与权限」的角色权限矩阵限定 —— 当前登录 <b>${me() ? `${me().name}（${me().roleName}）` : '未识别当前登录账号，按无权限处理'}</b>，
           对「接口管理」模块权限 <span class="mono">${selfCheckPerm()}</span>。值班员（该模块无权限）看不到本入口。</div>`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn pri" data-close onclick="UI.toast('自检报告已导出（Demo）','ok')">⭳ 导出自检报告</button>`,
+        <button class="btn pri" data-close onclick="UI.toast('自检报告已导出（Demo）','ok')">${U.icon('download')} 导出自检报告</button>`,
       mounted: el => {
         const t = el.querySelector('#scToggle'), b = el.querySelector('#scPass');
         t.onclick = () => {
@@ -1361,7 +1369,7 @@
         { t: '处理说明', k: 'd' }
       ], issues))}`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn pri" data-close onclick="UI.toast('校验报告已导出（Demo）','ok')">⭳ 导出校验报告</button>`,
+        <button class="btn pri" data-close onclick="UI.toast('校验报告已导出（Demo）','ok')">${U.icon('download')} 导出校验报告</button>`,
       mounted: el => el.addEventListener('click', e => {
         const t2 = e.target.closest('[data-c9]');
         if (t2) c09Close(c09List().find(x => x.id === t2.dataset.c9));

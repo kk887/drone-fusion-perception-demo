@@ -108,7 +108,7 @@
           ${U.field('状态', U.select('status', ['全部', ...FLOW_STATUS], st.status))}
           ${U.field('区域', U.select('region', ['全部', ...M.DISTRICTS.map(d => d.name)], st.region))}
           <span style="flex:1"></span>
-          <button class="btn" id="alChan">🔔 通知渠道</button>
+          <button class="btn" id="alChan">${U.icon('bell')} 通知渠道</button>
         </div>
         <div id="alList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
@@ -118,7 +118,7 @@
       title: '关联目标定位与轨迹', style: 'height:244px;max-height:50%;flex:none', nopad: true,
       bodyStyle: 'padding:6px',
       extra: `<span id="alMapSrc" style="font-size:11px;color:var(--txt-3);white-space:nowrap"></span>
-        <button class="btn" id="alLoc" style="height:24px;font-size:11.5px;flex:none" title="重新定位到当前告警的关联目标">📍 定位</button>`,
+        <button class="btn" id="alLoc" style="height:24px;font-size:11.5px;flex:none" title="重新定位到当前告警的关联目标">${U.icon('location')} 定位</button>`,
       body: `<div id="alMap" style="flex:1;min-height:0"></div>
           <div id="alMapInfo" style="flex:none;height:19px;line-height:19px;padding:2px 2px 0;font-size:10.5px;
             color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>`
@@ -136,15 +136,13 @@
     return U.table([
       {
         t: sortTh('ts', '告警编号 / 时间'), w: '108px', cls: 'num',
-        render: a => `<div>${a.id.slice(-9)}</div>
-          <div style="font-size:11px;color:var(--txt-3)">${a.time.slice(11)}</div>`
+        render: a => U.cell(a.id.slice(-9), a.time.slice(11), { mono: true })
       },
       { t: sortTh('level', '等级'), w: '52px', align: 'center', render: a => U.tag(a.level, a.level === '高' ? 't-red' : a.level === '中' ? 't-amber' : 't-blue') },
       {
-        t: sortTh('kind', '类别 / 类型'), w: '128px', render: a => `<div>${U.tag(a.kind, a.kind === '空间安全' ? 't-purple' : 't-orange')}</div>
-          <div style="font-size:11px;color:var(--txt-3)">${a.type}</div>`
+        t: sortTh('kind', '类别 / 类型'), w: '128px', render: a => U.cell(U.tag(a.kind, a.kind === '空间安全' ? 't-purple' : 't-orange'), a.type)
       },
-      { t: sortTh('district', '关联目标 / 区域'), w: '146px', render: a => `<div class="mono">${a.targetId}</div><div style="font-size:11px;color:var(--txt-3)">${a.district}</div>` },
+      { t: sortTh('district', '关联目标 / 区域'), w: '146px', render: a => U.cell(a.targetId, a.district, { mono: true }) },
       {
         /* table.tb 的 td 是 white-space:nowrap，这一列的**内容宽度**才是表格最小宽度的真正下限
            —— 调声明的 w 没有用。放开换行 + 两行截断，最小宽度从 446px 降到内容可折行的宽度，
@@ -182,11 +180,8 @@
 
   function disposalActions(a) {
     const s = statusOf(a);
-    if (s === '待核实') return U.sect('处置操作',
-      `<button class="btn pri" data-al="verify" style="width:100%;justify-content:center">人工核实</button>`);
-    if (s === '反制中') return U.sect('处置操作',
-      `<button class="btn danger" data-al="counter" style="width:100%;justify-content:center">⚡ 发起联动反制</button>
-       <div style="margin-top:7px;font-size:11.5px;color:var(--txt-3)">需完成目标、范围、合法目标影响、设备状态与人工双确认。</div>`);
+    if (s === '待核实') return `<button class="btn pri" data-al="verify">人工核实</button>`;
+    if (s === '反制中') return `<button class="btn danger" data-al="counter">${U.icon('bolt')} 发起联动反制</button>`;
     return '';
   }
 
@@ -195,9 +190,18 @@
     if (!a) return '<div class="empty">请选择告警</div>';
     document.getElementById('alSt').innerHTML = U.tag(statusOf(a));
     const t = M.allTargets.find(x => x.id === a.targetId) || {};
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <b class="mono" style="font-size:14px">${a.id}</b></div>
-      ${U.sect('处置流程', U.steps(disposalSteps(a)))}
+    return `${U.detailHero({
+      icon: 'alert', subtitle: '告警事件', title: a.type, id: a.id,
+      tags: [U.tag(a.level, a.level === '高' ? 't-red' : a.level === '中' ? 't-amber' : 't-blue'), U.tag(statusOf(a))],
+      meta: [['区域', a.district], ['时间', a.time.slice(11)]]
+    })}
+      ${U.metricStrip([
+        { label: '告警等级', value: a.level, tone: a.level === '高' ? 'bad' : a.level === '中' ? 'warn' : 'info', icon: 'alert' },
+        { label: '处置状态', value: statusOf(a), tone: statusOf(a) === '待核实' ? 'warn' : 'info', icon: 'play' },
+        { label: '目标类型', value: t.subtype || t.type || '—', icon: 'plane' },
+        { label: '来源置信', value: U.confPct(a.source_confidence), tone: 'good', icon: 'radar' }
+      ], { compact: true })}
+      ${U.sect('处置流程', U.steps(disposalSteps(a)), { icon: 'trend' })}
       ${U.sect('告警信息', U.kv([
       ['告警类型', a.type], ['告警等级', U.tag(a.level, a.level === '高' ? 't-red' : 't-amber')],
       ['触发时间', a.time], ['所在区域', a.district],
@@ -206,7 +210,7 @@
       ['高度/速度', (t.alt || '—') + ' m / ' + (t.speed || '—') + ' m/s'],
       ['数据来源', a.source + `（置信度 ${U.confPct(a.source_confidence)}）`],
       ['告警内容', a.detail]
-    ]))}
+    ], { surface: true, density: 'compact' }), { icon: 'alert' })}
       ${(function () {
         /* C06 去重与升级：先按「同目标 + 同类型 + 5 分钟窗口」在数据集中找真实同族告警；
            当前 Demo 数据集每个目标只生成一条告警，找不到同族时退回 CH.seeded 派生的合并明细，
@@ -254,7 +258,8 @@
           ['涉及目标', `<span class="mono">${(l.memberIds || []).join(' , ')}</span>`],
           ['判据', l.basis], ['执行者', l.operator]
         ])).join('') + `<div style="font-size:11px;color:var(--txt-3);line-height:1.7">
-          本条告警引用的 target_id 参与过上述变更；合并前的判定快照已随变更记录留存，证据链可回溯。</div>`);
+          本条告警引用的 target_id 参与过上述变更；合并前的判定快照已随变更记录留存，证据链可回溯。</div>`,
+          { collapsible: true, open: false, icon: 'trend' });
       })()}
       ${U.sect('通知记录（F0605）', (a.notifyLog && a.notifyLog.length)
         ? a.notifyLog.map(n => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;
@@ -262,12 +267,12 @@
             <span class="mono" style="color:var(--txt-3)">${n.time}</span>
             <span style="flex:1">${n.channel} → ${n.target}</span>
             <span style="color:${n.ok ? '#79e5a5' : '#ffd07a'}">${n.result}</span></div>`).join('')
-        : '<div style="color:var(--txt-3);font-size:12px">暂无通知记录</div>')}
-      ${disposalActions(a)}
-      ${U.sect('目标查看', `<div style="display:flex;gap:8px">
-        <button class="btn" data-al="video" style="flex:1;justify-content:center">📹 实时视频</button>
-        <button class="btn" data-al="replay" style="flex:1;justify-content:center">轨迹回放</button>
-      </div>`)}`;
+        : '<div style="color:var(--txt-3);font-size:12px">暂无通知记录</div>',
+        { collapsible: true, open: false, icon: 'bell' })}
+      ${U.detailActions(`
+        <button class="btn" data-al="video">${U.icon('video')} 实时视频</button>
+        <button class="btn" data-al="replay">${U.icon('trend')} 轨迹回放</button>
+        ${disposalActions(a)}`)}`;
   }
 
   function paint() {
@@ -326,7 +331,7 @@
       map.sel = null;
       map.setData({ airspaces: M.airspaces, devices: [], targets: [], alarms: [] });
       if (srcEl) srcEl.textContent = '';
-      if (info) info.innerHTML = `<span style="color:#ffd07a" title="历史告警的关联目标可能已被 B02 合并">⚠ 关联目标 ${a.targetId} 不在目标库中，无法定位</span>`;
+      if (info) info.innerHTML = `<span class="inline-icon" style="color:#ffd07a" title="历史告警的关联目标可能已被 B02 合并">${U.icon('warning')} 关联目标 ${a.targetId} 不在目标库中，无法定位</span>`;
       return;
     }
     const tk = trackFor(t, a);
@@ -546,7 +551,7 @@
         ${on.length ? on.map(c => `<label class="chk"><input type="checkbox" data-nc="${c.id}" checked>
             ${c.name} <span style="color:var(--txt-3)">→ ${c.target}</span>
             ${c.ready ? U.tag('已联调', 't-green') : U.tag('预留接口', 't-amber')}</label>`).join('')
-          : '<div class="empty">无已启用渠道，请先在「🔔 通知渠道」中启用</div>'}
+          : '<div class="empty">无已启用渠道，请先在「通知渠道」中启用</div>'}
         <div id="ncResult" style="margin-top:10px"></div>`,
       footer: `<button class="btn" data-close>关闭</button>
         <button class="btn pri" data-act="send" ${on.length ? '' : 'disabled'}>发送通知</button>`,
@@ -559,7 +564,7 @@
           const now = M.util.fmtDT(M.CONF.demoTime);
           const lines = picked.map(c => {
             const ok = c.ready;
-            const result = ok ? `✓ 已送达（回执 ${'RC' + CH.seeded(c.id + a.id)(100000, 999999)}）` : '⚠ 接口预留，Demo 未真实外发';
+            const result = ok ? `已送达（回执 ${'RC' + CH.seeded(c.id + a.id)(100000, 999999)}）` : '接口预留，Demo 未真实外发';
             a.notifyLog.push({ time: now, channel: c.name, target: c.target, ok, result });
             return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:4px 0;
               border-bottom:1px solid rgba(64,158,255,.08)">
@@ -591,7 +596,7 @@
   U.regParams({
     key: 'F0605', name: '告警通知渠道与触发规则', page: '异常告警中心', hash: '#/alarms',
     ver: 'demo-v1', confirmed: false, owner: '业务方',
-    basis: '需求文档 F0605 告警通知；渠道就绪状态见本页「🔔 通知渠道」',
+    basis: '需求文档 F0605 告警通知；渠道就绪状态见本页「通知渠道」',
     affects: ['告警外发', '通知升级', '夜间静默'],
     items: () => [
       { n: '已启用渠道 / 总数', v: `${M.notifyChannels.filter(c => c.on).length} / ${M.notifyChannels.length}` },

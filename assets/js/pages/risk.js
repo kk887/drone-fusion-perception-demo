@@ -73,7 +73,7 @@
      scheduleFeedback），字段是 to/ts/time/channel/content/feedback/by/kind。
      数据层接管后字段变成 at/channelName/operator/ackStatus/ackAt/ackBy/ackNote/api/evidenceId，
      而旧代码开头是 `if (M.riskNotices) return;` —— 于是生成被跳过、渲染却照旧读旧字段名，
-     页面上直接印出 "✓ undefined"。**两份口径并存时，先到的那份决定行为，后到的那份决定字段。**
+     页面上直接印出 "通过 undefined"。**两份口径并存时，先到的那份决定行为，后到的那份决定字段。**
      所以不是补几个字段名的事，是这套生成必须整体删掉：留着它，下次数据层再改字段又会复现。
      回执也不再由页面定时器伪造 —— ackStatus 是数据层的状态机（已回执/回执超时/发送失败/待回执），
      超时与失败带 ackNote 说明后续动作，页面照实显示即可。 */
@@ -187,7 +187,7 @@
          不写死像素：屏幕越高空白越多且没有上限。 */''}
     <div class="row" style="margin-top:12px;height:calc(100vh - 314px);min-height:578px">
       ${U.panel({
-      /* 标题 + ⚙ 按钮在 1440 宽下把 .ph 撑出 18px（h3 是 nowrap，panel 不裁剪，直接外溢）。
+      /* 标题 + 设置按钮在 1440 宽下把 .ph 撑出 18px（h3 是 nowrap，panel 不裁剪，直接外溢）。
          面板本身只有 281px，标题必须短。 */
       title: '风险事件与航线分布', style: 'flex:0.82', nopad: true, bodyStyle: 'padding:6px',
       /* 图例放地图下方单行，不放面板头 —— 面板只有 336px 宽，头里塞长文本会换行，
@@ -227,10 +227,10 @@
         ${U.field('风险等级', U.select('level', ['全部', '高', '中', '低'], st.level))}
         ${U.field('目标类型', U.select('type', ['全部', '鸟', '未知', '识别中', '船', '车'], st.type))}
         <span style="flex:1"></span>
-        ${/* 「📣 通报保护对象」按钮已按用户要求删除 —— 连同"保护对象"这一层概念一起去掉。
+        ${/* 「通报保护对象」按钮已按用户要求删除 —— 连同"保护对象"这一层概念一起去掉。
              通报记录本身保留（由「通知上级」写入的那套），只是不再有"向保护对象群发日报"这个动作。 */''}`
       : `<span style="flex:1"></span>
-        ${/* 「📣 新增通报」按钮与那行"设计 9.2 …"说明已按用户要求删除。
+        ${/* 「新增通报」按钮与那行"设计 9.2 …"说明已按用户要求删除。
              删说明的理由单独说一句：**设计编号是给我们自己看的，不该出现在客户界面上**。
              通报记录页签与「通知上级」的写入链路保留 —— 删的只是手工新增入口：
              通报记录应当是"通知上级"这个动作的产物，不是一个可以凭空补录的台账。 */''}`}
@@ -322,7 +322,17 @@
     const r = st.sel;
     if (!r) return '<div class="empty">请选择事件</div>';
     document.getElementById('rkSt').innerHTML = U.tag(r.level, r.level === '高' ? 't-red' : 't-amber');
-    return `<div style="margin-bottom:10px"><b class="mono" style="font-size:14px">${r.id}</b></div>
+    return `${U.detailHero({
+      icon: 'bird', variant: 'micro', subtitle: '空间安全风险', title: r.subtype || r.type + '风险事件', id: r.id,
+      tags: [U.tag(r.level, r.level === '高' ? 't-red' : r.level === '中' ? 't-amber' : 't-blue'), U.tag(r.status)],
+      meta: [['区域', r.district], ['规模', r.count + (r.type === '鸟' ? '只' : '个')]]
+    })}
+      ${U.metricStrip([
+        { label: '风险等级', value: r.level, tone: r.level === '高' ? 'bad' : r.level === '中' ? 'warn' : 'info', icon: 'alert' },
+        { label: '目标规模', value: r.count, unit: r.type === '鸟' ? '只' : '个', icon: 'bird' },
+        { label: '飞行高度', value: r.alt, unit: 'm', icon: 'trend' },
+        { label: '距最近航线', value: r.nearestRouteKm, unit: 'km', icon: 'plan' }
+      ], { compact: true })}
       ${U.sect('事件信息', U.kv([
       ['目标编号', `<span class="mono">${r.targetId}</span>`],
       ['目标类型', `${r.type} ${U.srcTag('device')}`],
@@ -332,12 +342,12 @@
       ['发现时间', r.time], ['区域', r.district],
       ['高度 / 速度', r.alt + ' m / ' + r.speed + ' m/s'],
       ['运动趋势', r.trend]
-    ]))}
+    ], { surface: true, density: 'compact' }), { icon: 'bird' })}
       ${(function () {
         /* 航线口径影响评估。三因子：距最近航线走廊、高度是否重叠、时间窗内有无计划。
            **高度不可判定单列，不并进"不重叠"** —— 全站 27 条属这一档，
            把它算成"不重叠"等于把"不知道"说成"没问题"（undeterminable[] 里有原因）。
-           ⚠ inWindow 当前恒为 true（163/163）：46 条计划的时段全部落在 7 天窗口内，
+           注意：inWindow 当前恒为 true（163/163）：46 条计划的时段全部落在 7 天窗口内，
            **这个因子在当前数据下不具判别力**，界面照实标注，不假装它参与了判定。 */
         const ov = r.altOverlap;
         const undet = (r.undeterminable || []).filter(x => /alt|高度/i.test(x.k || x));
@@ -376,9 +386,7 @@
            注意：**列表行内的核验/转处置/归档按钮不在本次范围**，那是用户此前明确要的工作流。 */
         const can = (M.riskNext ? M.riskNext(r.status) : []).some(t => t.to === '已通知');
         if (!can) return '';
-        return `<div style="margin-top:10px">
-          <button class="btn pri" style="width:100%;justify-content:center" data-rkto="已通知">通知上级</button>
-        </div>`;
+        return U.detailActions(`<button class="btn pri" style="width:100%;justify-content:center" data-rkto="已通知">通知上级</button>`);
       })()}`;
   }
 
@@ -770,7 +778,7 @@
            形式上存在、实质不可能被违反的判据，如果不显式登记，读表的人会以为三因子都在生效。 */
         { n: '时间窗因子当前判别力',
           v: (inW === tot || inW === 0)
-            ? `⚠ ${inW}/${tot} 取值相同，该因子暂不区分任何事件`
+            ? `注意：${inW}/${tot} 取值相同，该因子暂不区分任何事件`
             : `${inW}/${tot} 在窗口内，该因子有判别力` }
       ];
     }

@@ -14,7 +14,7 @@
 
   const M = g.MOCK, U = g.UI;
   const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-  const HOTKEY = MAC ? '⌘K' : 'Ctrl+K';
+  const HOTKEY = MAC ? 'Command+K' : 'Ctrl+K';
   const PER_GROUP = 6;              // 每组最多列这么多条，其余给出「另有 N 条」
 
   /* ---------------- 时间与区域的关键字识别 ---------------- */
@@ -70,7 +70,7 @@
      命中时在分组标题上直说「不受时间筛选」，不装作筛过了。 */
   const ENTITIES = [
     {
-      key: 'target', label: '目标', icon: '🛩', page: 'legality', timeScoped: true,
+      key: 'target', label: '目标', icon: 'plane', page: 'legality', timeScoped: true,
       list: () => M.allTargets,
       district: o => o.district,
       day: o => o.ymd,
@@ -93,7 +93,7 @@
       }
     },
     {
-      key: 'device', label: '设备', icon: '📡', page: 'devices', timeScoped: false,
+      key: 'device', label: '设备', icon: 'radar', page: 'devices', timeScoped: false,
       list: () => M.devices,
       district: o => o.region,
       text: o => [o.id, o.name, o.type, o.cat, o.channel, o.vendor, o.owner, o.region,
@@ -107,7 +107,7 @@
       open: o => ({ page: 'devices', kwSel: '#dvKw', kw: o.id, rowId: o.id })
     },
     {
-      key: 'flight', label: '飞行计划', icon: '📋', page: 'flights', timeScoped: true,
+      key: 'flight', label: '飞行计划', icon: 'clipboard', page: 'flights', timeScoped: true,
       list: () => M.flightPlans,
       district: o => o.region,
       day: o => +String(o.start).slice(0, 10).replace(/-/g, ''),
@@ -121,7 +121,7 @@
       open: o => ({ page: 'flights', kwSel: '#flKw', kw: o.id, rowId: o.id })
     },
     {
-      key: 'alarm', label: '告警', icon: '⚠', page: 'alarms', timeScoped: true,
+      key: 'alarm', label: '告警', icon: 'warning', page: 'alarms', timeScoped: true,
       list: () => M.alarms,
       district: o => o.district,
       day: o => o.ymd,
@@ -134,7 +134,7 @@
       open: o => { sessionStorage.setItem('alarm.sel', o.id); return { page: 'alarms', rowId: o.id }; }  // 告警页用的是自己的 key
     },
     {
-      key: 'case', label: '处罚案件', icon: '⚖', page: 'punish', timeScoped: true,
+      key: 'case', label: '处罚案件', icon: 'scale', page: 'punish', timeScoped: true,
       list: () => M.cases,
       district: o => o.district,
       day: o => o.ymd,
@@ -204,7 +204,7 @@
         background:#0a1730;border:1px solid rgba(64,158,255,.32);border-radius:10px;
         box-shadow:0 18px 60px rgba(0,0,0,.55);overflow:hidden">
         <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(64,158,255,.18)">
-          <span style="font-size:15px;color:#9ec6ff">🔍</span>
+          <span class="field-icon" style="font-size:15px;color:#9ec6ff">${U.icon('search')}</span>
           <input id="gsInput" class="ip" style="flex:1;height:34px;font-size:14px;background:transparent;border:none;outline:none"
             placeholder="目标编号 / 设备 / 计划 / 告警 / 案件　可连写区域与时间，如「东营区 今天」" autocomplete="off">
           <span style="font-size:11px;color:var(--txt-3);white-space:nowrap">Esc 关闭</span>
@@ -291,7 +291,7 @@
         ? `<div style="padding:3px 14px 6px;font-size:11px;color:var(--txt-3)">
              另有 ${gp.total - gp.items.length} 条未列出，可补充关键字缩小范围</div>` : '';
       return `<div style="padding:8px 14px 3px;font-size:11.5px;color:#9ec6ff;font-weight:600">
-          ${gp.e.icon} ${gp.e.label} <span style="color:var(--txt-3);font-weight:400">${gp.total}</span>${skip}</div>${rows}${more}`;
+          <span class="inline-icon">${U.icon(gp.e.icon)} ${gp.e.label}</span> <span style="color:var(--txt-3);font-weight:400">${gp.total}</span>${skip}</div>${rows}${more}`;
     }).join('');
 
     body.querySelectorAll('[data-gi]').forEach(el => {
@@ -304,7 +304,7 @@
   function hint() {
     return `<div style="padding:16px 16px 6px;font-size:12.5px;color:var(--txt-2)">检索六类对象</div>
       <div style="padding:0 16px;display:flex;gap:6px;flex-wrap:wrap">
-        ${ENTITIES.map(e => `<span class="tag t-gray">${e.icon} ${e.label} ${U.num(e.list().length)}</span>`).join('')}
+        ${ENTITIES.map(e => `<span class="tag t-gray inline-icon">${U.icon(e.icon)} ${e.label} ${U.num(e.list().length)}</span>`).join('')}
       </div>
       <div style="padding:14px 16px 6px;font-size:12.5px;color:var(--txt-2)">试试这些</div>
       <div style="padding:0 16px;display:flex;gap:6px;flex-wrap:wrap">
@@ -415,7 +415,7 @@
     const wrap = document.createElement('span');
     wrap.className = 'it';
     wrap.innerHTML = `<button class="btn ghost" id="btnSearch" title="统一检索：目标 / 设备 / 计划 / 告警 / 案件（${HOTKEY}）"
-      style="gap:6px">🔍 检索<span style="font-size:10.5px;opacity:.65;border:1px solid var(--line);
+      style="gap:6px">${U.icon('search')} 检索<span style="font-size:10.5px;opacity:.65;border:1px solid var(--line);
       border-radius:3px;padding:0 4px;line-height:15px">${HOTKEY}</span></button>`;
     meta.insertBefore(wrap, meta.querySelector('.bell') || meta.lastChild);
     document.getElementById('btnSearch').onclick = () => open('');

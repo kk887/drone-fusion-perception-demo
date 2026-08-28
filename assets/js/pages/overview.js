@@ -100,7 +100,6 @@
   function focusCards() {
     return EVT.focus(4).map(a => {
       const t = M.allTargets.find(x => x.id === a.targetId) || {};
-      const isMain = a.targetId === EVT.MAIN;
       return `<div class="f lv${LV[a.level] || 3}" data-ev="${a.targetId}">
         <div class="r1"><span class="id">${a.targetId}</span>
           ${U.tag(a.level + '风险', a.level === '高' ? 't-red' : a.level === '中' ? 't-amber' : 't-blue')}
@@ -109,7 +108,7 @@
         <div class="r2">${a.district} · ${a.detail}</div>
         <div class="r3"><span class="mono">${a.time.slice(11)}</span>
           <span>${t.legal && t.legal !== '不适用' ? '判定 ' + t.legal : '空间安全风险'}</span>
-          <span class="go">${isMain ? '★ 演示主线 · ' : ''}进入告警中心 ›</span></div>
+          <span class="go">进入告警中心 ›</span></div>
       </div>`;
     }).join('') || `<div class="empty">今日暂无需要关注的事件</div>`;
   }
@@ -117,7 +116,8 @@
   function mount(view) {
     const S = M.todayStats;
     map = new MapView(document.getElementById('ovMap'), {
-      maxDev: 60, maxAlarm: 6, zoom: 1.06,
+      maxDev: 32, maxAlarm: 4, zoom: 1.06,
+      showAirspaceLabels: false, showTargetLabels: false,
       onPick: p => {
         if (p.kind === 'target') location.hash = '#/situation';
         else if (p.kind === 'alarm') location.hash = '#/alarms';
@@ -126,8 +126,8 @@
       }
     });
     map.setData({
-      airspaces: M.airspaces, devices: M.devices.filter((d, i) => i % 6 === 0),
-      targets: M.liveTargets.slice(0, 8), alarms: M.todayAlarms
+      airspaces: M.airspaces, devices: M.devices.filter((d, i) => i % 12 === 0),
+      targets: M.liveTargets.slice(0, 6), alarms: EVT.focus(4)
     });
 
     CH.line(document.getElementById('ovTrend'), {

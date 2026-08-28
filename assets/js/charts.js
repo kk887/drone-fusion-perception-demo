@@ -3,20 +3,22 @@
  * ========================================================================== */
 (function (g) {
   'use strict';
-  const C = { blue: '#3d8bff', cyan: '#22d3ee', green: '#2fd06e', amber: '#ffb020', orange: '#ff8b3d', red: '#ff4d5e', purple: '#a97bff', pink: '#ff5fa2', gray: '#8ca0be' };
+  const C = { blue: '#4b9cff', cyan: '#2dcfd0', green: '#41d49a', amber: '#f1a43a', orange: '#f58245', red: '#ff5b61', purple: '#8e7dff', pink: '#e96fab', gray: '#7589a4' };
   const PALETTE = [C.blue, C.green, C.amber, C.red, C.purple, C.cyan, C.orange, C.gray];
   const AX = {
-    axisLine: { lineStyle: { color: 'rgba(64,158,255,.25)' } },
-    axisLabel: { color: '#8ba3c7', fontSize: 11 },
+    axisLine: { lineStyle: { color: 'rgba(130,174,218,.16)' } },
+    axisLabel: { color: '#879bb4', fontSize: 11, margin: 11 },
     axisTick: { show: false },
-    splitLine: { lineStyle: { color: 'rgba(64,158,255,.09)' } }
+    splitLine: { lineStyle: { color: 'rgba(130,174,218,.075)', type: 'dashed' } }
   };
   const TIP = {
-    backgroundColor: 'rgba(6,16,42,.95)', borderColor: 'rgba(64,158,255,.4)',
-    textStyle: { color: '#e6f0ff', fontSize: 12 }, confine: true,
-    axisPointer: { lineStyle: { color: 'rgba(64,158,255,.4)' } }
+    backgroundColor: 'rgba(8,20,35,.96)', borderColor: 'rgba(126,174,226,.24)',
+    textStyle: { color: '#edf5ff', fontSize: 12 }, confine: true,
+    padding: [9, 11],
+    extraCssText: 'box-shadow:0 16px 40px rgba(0,0,0,.34);border-radius:9px;backdrop-filter:blur(10px);',
+    axisPointer: { lineStyle: { color: 'rgba(75,156,255,.45)' } }
   };
-  const LEG = { textStyle: { color: '#9fb6d9', fontSize: 11 }, itemWidth: 10, itemHeight: 8, icon: 'roundRect' };
+  const LEG = { textStyle: { color: '#9aacbf', fontSize: 11 }, itemWidth: 10, itemHeight: 8, icon: 'roundRect' };
 
   const insts = [];
   function make(el, opt) {
@@ -38,8 +40,8 @@
       name: s.name, type: 'line', data: s.data, smooth: s.smooth !== false,
       symbol: 'circle', symbolSize: s.symbolSize || 5,
       yAxisIndex: s.yAxisIndex || 0,
-      lineStyle: { width: 2, color: s.color || PALETTE[i] },
-      itemStyle: { color: s.color || PALETTE[i], borderWidth: 1.5, borderColor: '#071231' },
+      lineStyle: { width: 2.2, color: s.color || PALETTE[i], shadowColor: (s.color || PALETTE[i]) + '44', shadowBlur: 7 },
+      itemStyle: { color: s.color || PALETTE[i], borderWidth: 2, borderColor: '#0b192a' },
       label: s.label ? { show: true, color: s.color || PALETTE[i], fontSize: 10, position: 'top' } : { show: false },
       areaStyle: s.area ? {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -67,10 +69,10 @@
       yAxis: Object.assign({ type: 'value', name: o.yName, nameTextStyle: { color: '#6c86ad', fontSize: 10 } }, AX),
       series: o.series.map((s, i) => ({
         name: s.name, type: 'bar', data: s.data, barMaxWidth: s.width || 26,
-        stack: s.stack,
+        stack: s.stack, showBackground: true, backgroundStyle: { color: 'rgba(125,165,210,.035)', borderRadius: [4, 4, 0, 0] },
         label: s.label !== false ? { show: true, position: 'top', color: '#9fb6d9', fontSize: 10, formatter: s.fmt } : { show: false },
         itemStyle: {
-          borderRadius: [3, 3, 0, 0],
+          borderRadius: [5, 5, 1, 1],
           color: s.colorBy ? (p => s.colorBy(p)) : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: s.color || PALETTE[i] }, { offset: 1, color: (s.color || PALETTE[i]) + '44' }])
         }
@@ -88,8 +90,9 @@
       series: [{
         type: 'bar', data: o.data, barMaxWidth: 13,
         label: { show: true, position: 'right', color: '#cfe0f8', fontSize: 11 },
+        showBackground: true, backgroundStyle: { color: 'rgba(125,165,210,.035)', borderRadius: 5 },
         itemStyle: {
-          borderRadius: 3,
+          borderRadius: 5,
           color: p => new echarts.graphic.LinearGradient(0, 0, 1, 0, [
             { offset: 0, color: (o.colors ? o.colors[p.dataIndex] : PALETTE[p.dataIndex % 8]) + '55' },
             { offset: 1, color: o.colors ? o.colors[p.dataIndex] : PALETTE[p.dataIndex % 8] }])
@@ -134,7 +137,7 @@
         type: 'pie', radius, center,
         avoidLabelOverlap: true, labelLine: { show: false },
         label: { show: false },
-        itemStyle: { borderColor: '#071231', borderWidth: 2 },
+        itemStyle: { borderColor: '#0b192a', borderWidth: 3, shadowColor: 'rgba(0,0,0,.18)', shadowBlur: 5 },
         data: o.data.map((d, i) => ({ name: d.name, value: d.value, itemStyle: { color: d.c || (o.colors ? o.colors[i] : PALETTE[i % 8]) } }))
       }].concat(showCenter ? [{
         // 透明占位系列,专门承载几何居中的中心文字(label position:center 以 series center 为锚点)
@@ -159,7 +162,7 @@
       series: [{
         type: 'gauge', startAngle: 90, endAngle: -270, radius: '92%',
         pointer: { show: false }, progress: { show: true, roundCap: true, width: 9, itemStyle: { color: o.color || C.blue } },
-        axisLine: { lineStyle: { width: 9, color: [[1, 'rgba(255,255,255,.09)']] } },
+        axisLine: { lineStyle: { width: 9, color: [[1, 'rgba(125,165,210,.10)']] } },
         splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
         title: { show: !!o.label, offsetCenter: [0, '26%'], color: '#8ba3c7', fontSize: 11 },
         detail: { valueAnimation: true, offsetCenter: [0, '-4%'], fontSize: o.fs || 20, color: '#e6f0ff', formatter: o.fmt || (v => v + '%') },

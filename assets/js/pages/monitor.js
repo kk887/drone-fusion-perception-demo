@@ -42,7 +42,7 @@ let chartPaused = false, logPaused = false;   // 图表刷新与日志滚动是�
     <div class="row" style="margin-top:12px;height:calc(100vh - 442px);min-height:300px">
       ${U.panel({
       title: '设备分类与状态', style: 'width:262px', nopad: true,
-      body: `<div style="padding:8px"><input class="ip" style="width:100%" placeholder="🔍 搜索设备名称或编号" id="mnKw"></div>
+      body: `<div style="padding:8px"><div class="search-input">${U.icon('search')}<input class="ip" style="width:100%" placeholder="搜索设备名称或编号" id="mnKw"></div></div>
         <div class="tree" id="mnTree" style="padding:0 8px 8px;overflow:auto"></div>`
     })}
       ${U.panel({
@@ -51,7 +51,7 @@ let chartPaused = false, logPaused = false;   // 图表刷新与日志滚动是�
         `<span class="tab ${t === tab ? 'on' : ''}" data-mt="${t}" style="padding:4px 10px">${t}</span>`).join('')}`,
       // 下拉里的选项是**接入通道**不是设备，原来标成「全部设备」是错的；且它以前没有任何事件绑定
       extra: `${U.select('mnCh', ['全部通道', ...M.deviceStats.byChannel.map(c => c.channel)])}
-        <button class="btn ghost" id="mnPause">⏸ 实时</button>`,
+        <button class="btn ghost" id="mnPause">${U.icon('pause')} 实时</button>`,
       body: `
         <div id="mnBody" style="flex:1;padding:10px;overflow:auto"></div>`
     })}
@@ -72,7 +72,7 @@ let chartPaused = false, logPaused = false;   // 图表刷新与日志滚动是�
           <option value="">全部类型</option>
           ${M.deviceStats.byType.map(t => `<option value="${t.type}">${t.type}（${t.total}）</option>`).join('')}
         </select>
-        <button class="btn" id="mnHold">⏸ 暂停滚动</button><button class="btn" id="mnClear">🗑 清空</button>`,
+        <button class="btn" id="mnHold">${U.icon('pause')} 暂停滚动</button><button class="btn" id="mnClear">${U.icon('trash')} 清空</button>`,
       body: `<div id="mnLog" style="flex:1;overflow:auto;padding:8px 12px"></div>`
     })}`;
   }
@@ -201,13 +201,20 @@ let chartPaused = false, logPaused = false;   // 图表刷新与日志滚动是�
           other: [['角色', '边端融合终端 · 汇聚子设备数据']]
         };
         const rows = COMMON.concat(T[d.deviceTypeAbbr] || []);
-        statHtml = `<div style="font-size:12px;color:#9ec6ff;margin-bottom:6px">
-            <b style="color:#79e6f6">${d.name}</b>（${d.type} · ${d.status}）
-            <span style="color:var(--txt-3)">协议字段 · v8.6 工参 + SenseDeviceExtension</span>
-            <span class="lnk" data-mnclear style="margin-left:8px">返回全部 ›</span></div>
-          <div style="display:grid;grid-template-columns:150px 1fr;gap:5px 12px;font-size:12.5px">
-            ${rows.map(([k, v]) => `<div style="color:var(--txt-3)">${k}</div><div>${v}</div>`).join('')}
-          </div>`;
+        statHtml = `${U.detailHero({
+          icon: 'mon', title: d.name, subtitle: '设备实时监测', id: d.id,
+          tags: [U.tag(d.status), U.tag(d.type, 't-cyan')],
+          meta: [['接入通道', d.channel], ['协议字段', 'v8.6 工参 + SenseDeviceExtension']]
+        })}
+          ${U.metricStrip([
+            { label: '在线状态', value: d.status, tone: d.status === '在线' ? 'good' : d.status === '异常' ? 'bad' : 'warn', icon: 'device' },
+            { label: '最后心跳', value: d.hb ? d.hb.slice(11) : '—', sub: d.hbMin != null ? d.hbMin + ' 分钟前' : '', icon: 'clock' },
+            { label: '时延 / 丢包', value: d.latency == null ? '—' : d.latency + 'ms', sub: d.loss == null ? '' : '丢包 ' + d.loss + '%', tone: d.loss > 5 ? 'warn' : 'info', icon: 'trend' },
+            { label: '工作状态', value: d.workState || d.health || '—', tone: d.health === '良好' ? 'good' : 'info', icon: 'mon' }
+          ], { compact: true })}
+          <div style="font-size:12px;color:#9ec6ff;margin:2px 0 8px">
+            <span class="lnk" data-mnclear>返回全部 ›</span></div>
+          ${U.sect('运行状态与能力参数', U.kv(rows, { surface: true, density: 'compact' }), { icon: 'mon' })}`;
       } else {
         statHtml = `<div style="font-size:12px;color:#9ec6ff;margin-bottom:6px">各类型设备状态
             <span style="color:var(--txt-3)">（点左侧树或右侧告警行可查看单台的协议字段）</span></div>` +
@@ -296,11 +303,11 @@ let chartPaused = false, logPaused = false;   // 图表刷新与日志滚动是�
     }, 2000);
 
     document.getElementById('mnPause').onclick = e => {
-      chartPaused = !chartPaused; e.target.textContent = chartPaused ? '▶ 已暂停' : '⏸ 实时';
+      chartPaused = !chartPaused; e.currentTarget.innerHTML = chartPaused ? `${U.icon('play')} 已暂停` : `${U.icon('pause')} 实时`;
       U.toast(chartPaused ? '已暂停图表实时刷新，数据冻结在当前时刻' : '已恢复图表实时刷新（2 秒/次）', chartPaused ? '' : 'ok');
     };
     document.getElementById('mnHold').onclick = e => {
-      logPaused = !logPaused; e.target.textContent = logPaused ? '▶ 继续滚动' : '⏸ 暂停滚动';
+      logPaused = !logPaused; e.currentTarget.innerHTML = logPaused ? `${U.icon('play')} 继续滚动` : `${U.icon('pause')} 暂停滚动`;
       U.toast(logPaused ? '日志流已暂停滚动（图表刷新不受影响）' : '日志流已继续滚动', logPaused ? '' : 'ok');
     };
     document.getElementById('mnClear').onclick = () => {
@@ -419,7 +426,7 @@ let chartPaused = false, logPaused = false;   // 图表刷新与日志滚动是�
     U.modal({
       title: '远程重启设备 · ' + d.name, width: '600px',
       body: `<div class="warnbox" style="border-color:rgba(255,77,94,.45)">
-          ⚠ 远程重启是<b>控制类指令</b>，作用于在网感知设备。重启期间该设备停止上报，
+          注意：远程重启是<b>控制类指令</b>，作用于在网感知设备。重启期间该设备停止上报，
           融合结果在此期间可能降级。依纪要 §8.1，控制类指令须具备<b>幂等、回执与急停</b>，
           本次下发与回执全程记入操作审计。</div>
         ${U.kv([

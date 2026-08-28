@@ -227,8 +227,18 @@
     const left = daysLeft(f), sane = retainSane(f);
     const logs = accessLogs(f);
 
-    return `<div style="margin-bottom:10px"><b class="mono" style="font-size:14px">${f.id}</b>
-        <div style="font-size:11.5px;color:var(--txt-2);margin-top:3px;word-break:break-all">${f.name}</div></div>
+    const ingestSec = Math.max(0, Math.round((new Date(f.ingestAt) - new Date(f.capturedAt)) / 1000));
+    return `${U.detailHero({
+      icon: 'file', subtitle: '证据文件', title: f.name, id: f.id,
+      tags: [U.tag(f.verifyState, VC[f.verifyState]), U.tag(f.status, SC[f.status])],
+      meta: [['格式', f.ext.toUpperCase()], ['大小', f.sizeMB.toFixed(2) + ' MB']]
+    })}
+      ${U.metricStrip([
+        { label: '完整性', value: f.verifyState, tone: isBad(f) ? 'bad' : 'good', icon: 'shield' },
+        { label: '保管状态', value: f.status, tone: f.status === '在库' ? 'good' : 'warn', icon: 'archive' },
+        { label: '引用次数', value: refs.length, unit: '处', tone: refs.length ? 'info' : 'warn', icon: 'link' },
+        { label: '入库时差', value: ingestSec, unit: 's', tone: ingestSec <= 60 ? 'good' : 'warn', icon: 'clock' }
+      ], { compact: true })}
 
       ${U.sect('文件信息', U.kv([
       ['类型', U.tag(f.kind, 't-cyan')],
@@ -253,7 +263,7 @@
       ['校验结果', U.tag(f.verifyState, VC[f.verifyState])]
     ]) + (isBad(f)
       ? `<div class="warnbox" style="border-color:rgba(255,77,94,.45);margin-top:8px;line-height:1.85">
-           <b>处置流程</b><br>${f.verifyNote || '⚠ 未记录处置说明 —— 校验异常必须写明发现时间、处置流程与责任人'}</div>`
+           <b>处置流程</b><br>${f.verifyNote || U.icon('warning') + ' 未记录处置说明 —— 校验异常必须写明发现时间、处置流程与责任人'}</div>`
       : `<div style="font-size:11px;color:var(--txt-3);margin-top:6px;line-height:1.7">
            每 ${M.EVID_PARAMS.verifyCycleDays} 天全量比对一次入库哈希。校验只做比对与记录，
            <b>不会自动"修复"</b> —— 异常必须人工判定来源并留痕。</div>`))}
@@ -268,7 +278,7 @@
         ? `<span class="tag t-purple">冻结中</span> <span style="font-size:11.5px;color:var(--txt-3)">${f.holdReason || ''}</span>`
         : '<span class="tag t-gray">未冻结</span>']
     ]) + (sane ? '' : `<div class="warnbox" style="border-color:rgba(255,77,94,.45);margin-top:8px;line-height:1.8">
-        <b>⚠ 该记录到期日（${f.retainUntil}）早于取证时刻（${f.capturedAt.slice(0, 10)}）</b>，时间线不成立。
+        <b class="inline-icon">${U.icon('warning')} 该记录到期日（${f.retainUntil}）早于取证时刻（${f.capturedAt.slice(0, 10)}）</b>，时间线不成立。
         本页不替数据层修正这类矛盾 —— 兜住了就再也没人会发现它是错的。已登记给数据层修正。</div>`)
       + (f.status === '已销毁' ? U.kv([
         ['销毁时间', f.destroyAt], ['销毁执行人', f.destroyBy],
@@ -300,33 +310,18 @@
            历史累计 ${f.accessCount} 次，最近一次 ${f.lastAccessAt}。</div>`)}
 
       ${U.sect('操作', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn" data-evact="read">🔍 调阅（记入审计）</button>
-        <button class="btn" data-evact="verify">✓ 立即校验</button>
-        <button class="btn danger" data-evact="destroy" style="grid-column:span 2"
-          ${f.status === '已销毁' ? 'disabled title="该文件已销毁"' : ''}>⛔ 申请销毁</button>
+        <button class="btn pri" data-evact="download">${U.icon('download')} 下载</button>
+        <button class="btn" data-evact="read">${U.icon('search')} 调阅（记入审计）</button>
+        <button class="btn" data-evact="verify">${U.icon('check')} 立即校验</button>
+        <button class="btn danger" data-evact="destroy"
+          ${f.status === '已销毁' ? 'disabled title="该文件已销毁"' : ''}>${U.icon('ban')} 申请销毁</button>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--txt-3);line-height:1.8">
-        本页<b>不提供下载与在线预览</b>：Demo 无真实文件，做一个点了没反应的下载按钮比明说没有更有害。
-        正式环境下载须经审批并逐次记入调阅审计。</div>`)}`;
+        Demo 下载仅演示操作入口，不包含真实文件；正式环境须经审批并逐次记入调阅审计。</div>`)}`;
   }
 
   function detail() {
-    const f = st.sel;
-    if (!f) return '<div class="empty">请选择证据文件</div>';
-    return '<div style="margin-bottom:10px">'
-      + '<b class="mono" style="font-size:14px">' + f.id + '</b>'
-      + '<div style="font-size:11.5px;color:var(--txt-2);margin-top:3px;word-break:break-all">' + f.name + '</div>'
-      + '</div>'
-      + U.sect('文件信息', U.kv([
-        ['类型', U.tag(f.kind, 't-cyan')],
-        ['格式 / 大小', f.ext.toUpperCase() + ' · ' + f.sizeMB.toFixed(2) + ' MB'],
-        ['归属模块', U.tag(f.srcModule, 't-blue')],
-        ['产生动作', '<span style="line-height:1.6">' + f.originAction + '</span>'],
-        ['取证时刻', f.capturedAt],
-        ['入库时刻', f.ingestAt]
-      ]))
-      + U.sect('操作', '<button class="btn pri" data-evact="download" '
-        + 'style="width:100%;height:36px;justify-content:center">⭳ 下载</button>');
+    return legacyDetail();
   }
 
   function paint() {
@@ -432,7 +427,7 @@
       ])}
         ${blocks.length
           ? `<div class="warnbox" style="border-color:rgba(255,77,94,.45);margin-top:10px;line-height:1.9">
-               <b>⛔ 不满足销毁条件，申请已拦截：</b><br>${blocks.map((b, i) => (i + 1) + '. ' + b).join('<br>')}</div>`
+               <b class="inline-icon">${U.icon('ban')} 不满足销毁条件，申请已拦截：</b><br>${blocks.map((b, i) => (i + 1) + '. ' + b).join('<br>')}</div>`
           : `${U.sect('审批信息', `${U.field('销毁审批号', `<input class="ip" data-fapp style="flex:1" placeholder="如 DEL-2026-0118">`)}
                <label class="chk"><input type="checkbox" data-c>我已确认该证据留存期届满、关联案件已结案且无复核请求，并知悉本次销毁不可逆、将永久记录审批号与执行人</label>`)}`}`,
       footer: blocks.length

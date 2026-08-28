@@ -256,7 +256,7 @@
           ${U.field('合作方', U.select('partner', ['全部合作方', ...M.PARTNERS.map(p => p.name)], st.partner))}
           ${U.field('通知状态', U.select('status', ['全部状态', '待通知', '已通知'], st.status))}
           <button class="btn" id="pnR">重置筛选</button>
-          <span style="flex:1"></span><button class="btn" id="pnExp">⭳ 导出</button>
+          <span style="flex:1"></span><button class="btn" id="pnExp">${U.icon('download')} 导出</button>
         </div>
         <div id="pnList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
@@ -292,7 +292,7 @@
     ${U.panel({
       title: '反制与公安信号干扰授权记录', sub: '全过程审计（§11.1）· 不可修改、不可删除',
       style: 'height:calc(100vh - 482px);min-height:410px;margin-bottom:12px', nopad: true,
-      extra: `<button class="btn" id="pnAuthExp">⭳ 导出审计</button>
+      extra: `<button class="btn" id="pnAuthExp">${U.icon('download')} 导出审计</button>
         <button class="btn danger" id="pnJam">发起公安授权信号干扰</button>`,
       body: `<div id="pnAuth" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>`
     })}`;
@@ -462,7 +462,7 @@
         ['├ 已立案', `<b class="mono" style="color:#79e5a5">${S2.filedIllegal}</b> 件`],
         ['├ 待办案源', `<b class="mono" style="color:#ffd07a">${S2.pend}</b> 条（${Object.entries(S2.by).map(x => x[0] + ' ' + x[1]).join(' · ')}）`],
         ['└ 合计核对', S2.filedIllegal + S2.pend === S2.illegal
-          ? `<span class="tag t-green">${S2.filedIllegal} + ${S2.pend} = ${S2.illegal} ✓</span>`
+          ? `<span class="tag t-green inline-icon">${S2.filedIllegal} + ${S2.pend} = ${S2.illegal} ${U.icon('check')}</span>`
           : `<span class="tag t-red">${S2.filedIllegal} + ${S2.pend} ≠ ${S2.illegal}</span>`],
         ['另计', S2.revised
           ? `<b class="mono">${S2.revised}</b> 件已立案案件的目标经事实修订降级为「待确认」，已进入 §11 复核
@@ -488,7 +488,7 @@
     ${U.panel({
       title: '待办案源（未立案，非案件）', sub: `${(M.pendingSubjects || []).length} 条 · 违法事实成立但尚不具备立案条件`,
       style: 'height:calc(100vh - 482px);min-height:410px;margin-bottom:12px', nopad: true,
-      extra: `<button class="btn" id="pnPendExp">⭳ 导出待办清单</button>`,
+      extra: `<button class="btn" id="pnPendExp">${U.icon('download')} 导出待办清单</button>`,
       body: `<div id="pnPendList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}`;
   }
@@ -542,7 +542,7 @@
         ['阻断原因', U.tag(p.blockedBy, p.blockedBy === '责任主体待认定' ? 't-red' : 't-amber')]
       ])}
         ${U.sect('认定缺口', `<div style="font-size:12.5px;line-height:2">
-          ${(p.missing || []).map(x => `<div>✗ ${x}</div>`).join('')}</div>`)}
+          ${(p.missing || []).map(x => `<div class="inline-icon">${U.icon('cross')} ${x}</div>`).join('')}</div>`)}
         ${U.sect('下一步', `<div style="font-size:12.5px;color:#ffd07a">${p.nextStep}</div>
           <div style="font-size:11.5px;color:var(--txt-3);margin-top:6px;white-space:normal">
             补齐任一条认定路径后由数据层重新派生为案件；本页不提供直接立案入口 —— 条件不满足时没有入口，这本身就是闸门。</div>`)}
@@ -593,13 +593,16 @@
        读完六格才知道卡在哪一环，而值班员打开这一页就是来找那一个动作的。 */
     const ctxE = EVT.of(c.targetId);
     const td = ctxE && EVT.todo(ctxE);
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <b class="mono" style="font-size:14px">${c.id}</b>${U.tag(c.status)}</div>
+    return `${U.detailHero({
+      icon: 'gavel', subtitle: '处置处罚案件', title: t.subtype || t.type || '低空安全案件', id: c.id,
+      tags: [U.tag(c.status), t.legal ? U.legal(t.legal) : ''],
+      meta: [['目标', c.targetId], ['区域', c.district || t.district || '—']]
+    })}
       ${td ? `<div class="todo" style="margin-bottom:14px;padding:11px 14px">
         <div style="font-size:20px">▸</div>
         <div class="tl2"><b>当前待办：${td.label}</b><span>责任模块 ${td.owner}</span></div></div>`
       : `<div class="verdict ok" style="margin-bottom:14px;padding:11px 16px">
-        <div class="vi" style="width:34px;height:34px;font-size:18px">✓</div>
+        <div class="vi" style="width:34px;height:34px;font-size:18px">${U.icon('check')}</div>
         <div class="vt"><h2 style="font-size:17px">已办结归档</h2></div></div>`}
       ${U.sect('案件流程', (function () {
       /* 六环节横跨三个模块：本页负责「立案」「结案归档」，其余四环是**别处发生的既有事实**。
@@ -613,7 +616,7 @@
         const col = done ? (own ? '#79e5a5' : '#8fbaff') : (stp.act ? '#ffd07a' : 'var(--txt-3)');
         return `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 0;
             border-bottom:1px solid rgba(64,158,255,.08)">
-            <span style="color:${col};font-size:12px;width:14px;text-align:center">${done ? '✓' : stp.act ? '▶' : '○'}</span>
+            <span style="color:${col};font-size:12px;width:14px;text-align:center">${done ? U.icon('check') : stp.act ? U.icon('play') : '○'}</span>
             <div style="flex:1;min-width:0">
               <div style="font-size:12.5px;color:${done ? 'var(--txt)' : 'var(--txt-3)'}">
                 ${i + 1}. ${stp.n}
@@ -670,8 +673,8 @@
            现在 c.evidence 已由 evidenceOf 派生，方块也逐份取自台账，两者同源。 */
         const fs2 = M.evidenceOf ? M.evidenceOf('case', c.id) : [];
         const bad = fs2.filter(f => f.verifyState !== '完好');
-        const ICON = { '光电录像': '🎞', '光电抓拍图': '📷', '雷达轨迹快照': '📈', '现场照片': '🖼',
-          '处罚文书': '📄', '指令报文与回执': '🧾', '通报单回执': '📨', '调测报告': '🛠' };
+        const ICON = { '光电录像': 'video', '光电抓拍图': 'camera', '雷达轨迹快照': 'trend', '现场照片': 'image',
+          '处罚文书': 'file', '指令报文与回执': 'receipt', '通报单回执': 'mail', '调测报告': 'tool' };
         if (!fs2.length) return U.sect('证据链（0 项）',
           '<div class="warnbox" style="border-color:rgba(255,77,94,.45)">本案在证据台账中无关联材料，事实认定缺少可溯源证据。</div>');
         return U.sect(`证据链（${fs2.length} 项${bad.length ? ` · <span style="color:#ff8b95">${bad.length} 份校验异常</span>` : ''}）`, `
@@ -680,7 +683,7 @@
             border-radius:4px;background:linear-gradient(135deg,rgba(61,139,255,.22),rgba(4,12,32,.9));
             display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer"
             data-ev="${f.id}" title="${f.name}　${f.sizeMB.toFixed(1)}MB　${f.verifyState}">
-            <span style="font-size:14px">${ICON[f.kind] || '📁'}</span>
+            <span style="font-size:14px">${U.icon(ICON[f.kind] || 'folder')}</span>
             <span style="font-size:10px;color:var(--txt-2)">${f.kind}</span>
             ${f.verifyState === '完好' ? '' : `<span style="font-size:9px;color:#ff8b95">${f.verifyState}</span>`}
           </div>`).join('')}
@@ -735,7 +738,7 @@
             </div>
             <div style="display:flex;gap:8px;margin-top:9px">
               <button class="btn warn" style="flex:1;justify-content:center" data-jam="stop|${live.id}">停止干扰</button>
-              <button class="btn danger" style="flex:1;justify-content:center" data-jam="estop|${live.id}">■ 急停</button>
+              <button class="btn danger" style="flex:1;justify-content:center" data-jam="estop|${live.id}">${U.icon('estop')} 急停</button>
             </div>
           </div>`;
         return `<div style="display:flex;gap:8px;margin-top:8px">
@@ -781,8 +784,8 @@
       : `AUTH${String(c.date || '').slice(0, 7).replace(/-/g, '')}${M.util.p3(caseNo)}`;
     const device = (M.devices.find(d => d.region === c.district) || {}).name || '东营区雷达03号';
     const fs2 = M.evidenceOf ? M.evidenceOf('case', c.id) : [];
-    const ICON = { '光电录像': '🎞', '光电抓拍图': '📷', '雷达轨迹快照': '📈', '现场照片': '🖼',
-      '处罚文书': '📄', '指令报文与回执': '🧾', '通报单回执': '📨', '调测报告': '🛠' };
+    const ICON = { '光电录像': 'video', '光电抓拍图': 'camera', '雷达轨迹快照': 'trend', '现场照片': 'image',
+      '处罚文书': 'file', '指令报文与回执': 'receipt', '通报单回执': 'mail', '调测报告': 'tool' };
     const evidence = !fs2.length
       ? '<div class="warnbox" style="border-color:rgba(255,77,94,.45)">本案在证据台账中无关联材料，事实认定缺少可溯源证据。</div>'
       : `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
@@ -790,7 +793,7 @@
             border-radius:4px;background:linear-gradient(135deg,rgba(61,139,255,.22),rgba(4,12,32,.9));
             display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer"
             data-ev="${f.id}" title="${f.name}　${f.sizeMB.toFixed(1)}MB">
-            <span style="font-size:14px">${ICON[f.kind] || '📁'}</span>
+            <span style="font-size:14px">${U.icon(ICON[f.kind] || 'folder')}</span>
             <span style="font-size:10px;color:var(--txt-2)">${f.kind}</span>
           </div>`).join('')}
         </div>
@@ -799,10 +802,17 @@
 
     document.getElementById('pnSt').innerHTML =
       U.tag(nStatus, nStatus === '待通知' ? 't-amber' : 't-green');
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <b class="mono" style="font-size:14px">${c.id}</b>
-        ${U.tag(nStatus, nStatus === '待通知' ? 't-amber' : 't-green')}
-      </div>
+    return `${U.detailHero({
+      icon: 'gavel', subtitle: '处置处罚案件', title: snapOf(c).model || c.model || t.subtype || '低空安全案件', id: c.id,
+      tags: [U.tag(nStatus, nStatus === '待通知' ? 't-amber' : 't-green'), t.legal ? U.legal(t.legal) : ''],
+      meta: [['目标', c.targetId], ['区域', c.district]]
+    })}
+      ${U.metricStrip([
+        { label: '通知状态', value: nStatus, tone: nStatus === '待通知' ? 'warn' : 'good', icon: 'bell' },
+        { label: '违法类型', value: c.violation, tone: 'bad', icon: 'alert' },
+        { label: '证据数量', value: fs2.length, unit: '项', tone: fs2.length ? 'good' : 'bad', icon: 'folder' },
+        { label: '处置结果', value: auth ? auth.result : '待执行', tone: auth && auth.result !== '无效' ? 'good' : 'warn', icon: 'shield' }
+      ], { compact: true })}
       ${U.sect('违法事实', U.kv([
         ['目标编号', `<span class="mono lnk" data-goto="target">${c.targetId}</span>`],
         ['违法类型', U.tag(c.violation, 't-orange')],
@@ -811,17 +821,16 @@
         ['机型', U.modelTag(snapOf(c).model || c.model, snapOf(c).model_source)],
         ['责任主体', snapOf(c).subject || c.partner],
         ['认定依据', snapOf(c).basis || '空域规则 C02 + 计划匹配 C01']
-      ]))}
-      ${U.sect(`证据链（${fs2.length} 项）`, evidence)}
+      ], { surface: true, density: 'compact' }), { icon: 'alert' })}
+      ${U.sect(`证据链（${fs2.length} 项）`, evidence, { icon: 'folder' })}
       ${U.sect('关联设备与处置', U.kv([
         ['遥控器 SN', `<span class="mono">${c.rcSn}</span>`],
         ['发现设备', device],
         ['处置方式', '已发起反制'],
         ['授权编号', `<span class="mono">${authNo}</span>`],
         ['执行结果', '返航']
-      ]))}
-      ${nStatus === '待通知' ? `<button class="btn pri" data-notify="${c.id}"
-        style="width:100%;height:38px;justify-content:center;margin-top:12px">通知处罚部门</button>` : ''}`;
+      ], { surface: true, density: 'compact' }), { icon: 'device' })}
+      ${nStatus === '待通知' ? U.detailActions(`<button class="btn pri" data-notify="${c.id}">通知处罚部门</button>`) : ''}`;
   }
 
   function paintDetail() {
@@ -1189,7 +1198,7 @@
       ])}
         ${blocked ? `<div class="warnbox" style="margin-top:12px;border-color:rgba(255,176,32,.45);
             background:rgba(255,176,32,.08);line-height:1.85">
-            ⚠ <b>本环节不由处置处罚管理执行，无法在本页推进。</b><br>
+            注意：<b>本环节不由处置处罚管理执行，无法在本页推进。</b><br>
             ${probe.reason}<br>
             <span style="color:var(--txt-3)">六环节横跨三个模块，本页只负责<b>立案</b>与<b>结案归档</b>；
             其余环节在此处只作为既有事实展示，不由本页产生。</span></div>`
@@ -1264,7 +1273,7 @@
         <p>依据相关法规，决定给予：<b>${c.penalty}${c.penalty === '罚款' ? '人民币 ' + U.num(c.fine) + ' 元' : ''}</b>。</p>
         <div style="text-align:right;margin-top:24px">东营市公安局<br>${c.date}</div>
       </div>`,
-      footer: `<button class="btn" data-close>关闭</button><button class="btn pri" data-close onclick="UI.toast('文书已下载（Demo 样例，不具法律效力；金额档位表未经业务方确认）','err')">⭳ 下载 PDF</button>`
+      footer: `<button class="btn" data-close>关闭</button><button class="btn pri" data-close onclick="UI.toast('文书已下载（Demo 样例，不具法律效力；金额档位表未经业务方确认）','err')">${U.icon('download')} 下载 PDF</button>`
     });
   }
 
@@ -1299,7 +1308,7 @@
     const cases = M.cases.filter(c => c.status !== '已结案');
     U.modal({
       title: '发起公安授权信号干扰', width: '680px',
-      body: `<div class="warnbox">⚠ 信号干扰为公安受控手段。必须填写<b>审批/授权编号、联动单位、作用范围、执行时长</b>，
+      body: `<div class="warnbox">注意：信号干扰为公安受控手段。必须填写<b>审批/授权编号、联动单位、作用范围、执行时长</b>，
         执行期间支持启停与急停，全过程审计（纪要 §6.3 / §11.1）。平台不代替公安做审批。</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           ${U.field('关联案件', `<select class="sel" data-jcase style="flex:1">

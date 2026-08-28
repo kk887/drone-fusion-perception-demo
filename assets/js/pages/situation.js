@@ -60,7 +60,7 @@
          现在压成一条贡献条（谁接入了、置信度多少、权重多少），
          逐路字段、关联关系、点迹诊断、融合参数全部收进「技术详情」抽屉，一个都没删。 */
       title: '多源融合结果', sub: `融合置信度阈值 80%`, style: 'flex:none;height:228px',
-      extra: `<button class="btn ghost" id="btnTech">⚙ 技术详情</button>`,
+      extra: `<button class="btn ghost" id="btnTech">${U.icon('settings')} 技术详情</button>`,
       body: `<div id="stFuse"></div>`
     })}
       </div>
@@ -108,15 +108,17 @@
   function paintTarget() {
     const t = sel;
     document.getElementById('stTarget').innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <span style="font-size:17px">🛩</span>
-        <b class="mono" style="font-size:14px">${t.id}</b>${U.legal(t.legal)}${U.risk(t.risk)}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:12.5px">
-        ${[['类型', t.subtype], ['速度', t.speed + ' m/s'],
-        ['高度', t.alt + ' m'], ['轨迹', t.trackId + ' · ' + t.track.length + '点']]
-        .map(([k, v]) => `<div style="display:flex;gap:6px;min-width:0">
-            <span style="color:var(--txt-3);flex:none">${k}</span><span style="color:var(--txt);overflow:hidden;text-overflow:ellipsis">${v}</span></div>`).join('')}
+      <div class="target-summary-head">
+        <span class="target-summary-icon">${U.icon('plane')}</span>
+        <span><small>实时追踪目标</small><b class="mono">${t.id}</b></span>
+        <span class="target-summary-tags">${U.legal(t.legal)}${U.risk(t.risk)}</span>
       </div>
+      ${U.metricStrip([
+        { label: '目标类型', value: t.subtype || t.type, icon: 'plane' },
+        { label: '飞行速度', value: t.speed, unit: 'm/s', icon: 'trend' },
+        { label: '当前高度', value: t.alt, unit: 'm', icon: 'chart' },
+        { label: '融合来源', value: t.srcCount, unit: '路', tone: 'info', icon: 'radar' }
+      ], { compact: true })}
       <div style="margin-top:5px;font-size:12.5px;display:flex;flex-direction:column;gap:4px">
         <div style="display:flex;gap:6px"><span style="color:var(--txt-3);flex:none">经纬度</span>
           <span class="mono">${t.lon.toFixed(3)}°E, ${t.lat.toFixed(3)}°N</span></div>
@@ -207,7 +209,7 @@
     drawerEl = document.createElement('div');
     drawerEl.className = 'drawer';
     drawerEl.innerHTML = `<div class="dh">技术详情 · <span class="mono" style="font-size:14px">${sel.id}</span>
-        <span class="x" data-x>✕</span></div>
+        <span class="x" data-x>${U.icon('close')}</span></div>
       <div class="db">
         <div style="font-size:13px;color:var(--txt-3);margin-bottom:8px">各来源上报字段</div>
         ${cards}</div>`;
@@ -245,7 +247,7 @@
     U.modal({
       title: '反制处置授权确认',
       width: '720px',
-      body: `<div class="warnbox">⚠ 反制/干扰属受控操作。依据会议纪要 §6.3 与 §11.1，必须完成
+      body: `<div class="warnbox">注意：反制/干扰属受控操作。依据会议纪要 §6.3 与 §11.1，必须完成
         <b>目标确认 → 空域与范围校验 → 合法目标影响评估 → 设备状态校验 → 人工双确认</b>，
         执行过程全程留痕，支持随时停止与急停。</div>
         ${U.sect('① 目标确认', U.kv([
@@ -302,7 +304,7 @@
           <span>
             <button class="btn ghost" data-act="vis" style="height:24px;font-size:11.5px">可见光</button>
             <button class="btn ghost" data-act="ir" style="height:24px;font-size:11.5px">热成像</button>
-            <button class="btn ghost" data-act="snap" style="height:24px;font-size:11.5px">📷 截图取证</button>
+            <button class="btn ghost" data-act="snap" style="height:24px;font-size:11.5px">${U.icon('camera')} 截图取证</button>
           </span></div>
         <div id="exVideo" style="margin-bottom:10px"></div>
         <div id="exLog" style="font:12px/1.9 Menlo,monospace;color:var(--txt-2);height:150px;overflow:auto;
@@ -313,7 +315,7 @@
             <div style="font-size:11px;color:var(--txt-3)">${k}</div><div style="font-size:14px;margin-top:3px">${v}</div></div>`).join('')}
         </div>`,
       footer: `<button class="btn warn" data-act="stop">停止处置</button>
-        <button class="btn danger" data-act="estop">■ 急停</button>
+        <button class="btn danger" data-act="estop">${U.icon('estop')} 急停</button>
         <button class="btn" data-close>关闭</button>`,
       on: {
         stop: () => { push('[STOP] 操作人下发停止指令，设备已停止发射'); finish('已停止'); },
@@ -385,8 +387,8 @@
         // 回执是结构不是一个词：失败要能重试并计次，不能静默当成功
         const rr = CH.seeded('sync' + t.id)(1, 100);
         return rr > 12
-          ? `[SYNC] ← 回执 ✓ 已接收（上级平台 200 · 记录已入通报台账，待归入证据）`
-          : `[SYNC] ← 回执 ✗ 超时未响应，已置「待重试」（重试 1/3，不影响本次处置结果）`;
+          ? `[SYNC] ← 回执已接收（上级平台 200 · 记录已入通报台账，待归入证据）`
+          : `[SYNC] ← 回执超时未响应，已置「待重试」（重试 1/3，不影响本次处置结果）`;
       })(),
       `[ARCH] 处置结果与证据链已归档（轨迹 + 视频 + 告警 + 授权记录 + 上级同步回执）`
     ];
@@ -400,7 +402,7 @@
       if (i === script.length) {
         clearInterval(timer);
         finish('已完成');
-        U.toast('✅ 反制处置完成，回执已接收，结果已归档', 'ok');
+        U.toast(`${U.icon('check')} 反制处置完成，回执已接收，结果已归档`, 'ok');
         setTimeout(() => effectModal(t), 500);       // F0811:效果评估
       }
     }, 700);
@@ -431,7 +433,7 @@
       body: `<div class="warnbox">功能性实现（B档）：由处置前后轨迹变化形成结论并写入案件；
           <b>量化判据阈值待算法方标定</b>。结论已回写目标 ${t.id} 的处置记录。</div>
         <div style="display:flex;align-items:center;gap:14px;padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:12px">
-          <div style="font-size:30px">${verdict === '迫降' ? '🛬' : verdict === '返航' ? '↩️' : '➡️'}</div>
+          <div style="font-size:30px">${U.icon(verdict === '迫降' ? 'landing' : verdict === '返航' ? 'plane' : 'arrowRight')}</div>
           <div><div style="font-size:12px;color:var(--txt-3)">评估结论</div>
             <div style="font-size:20px;font-weight:700"><span class="tag ${vc}" style="font-size:16px;padding:2px 10px">${verdict}</span></div></div>
           <div style="margin-left:auto;text-align:right;font-size:11.5px;color:var(--txt-3)">评估时间<br>${M.util.fmtT(M.CONF.demoTime)}</div>
@@ -500,13 +502,13 @@
     document.getElementById('stAct').innerHTML = isUav
       ? `
          <div style="display:flex;gap:8px;margin-top:8px">
-           <button class="btn" id="btnVideo" style="flex:1;justify-content:center">📹 实时视频</button>
+           <button class="btn" id="btnVideo" style="flex:1;justify-content:center">${U.icon('video')} 实时视频</button>
            <button class="btn" id="btnReplay" style="flex:1;justify-content:center">轨迹回放</button>
          </div>`
       : `<button class="btn big" style="width:100%;justify-content:center" disabled title="非无人机目标不进入反制流程">
-           ⚡ 发起联动反制（不适用）</button>
+           ${U.icon('bolt')} 发起联动反制（不适用）</button>
          <div style="display:flex;gap:8px;margin-top:8px">
-           <button class="btn" id="btnVideo" style="flex:1;justify-content:center">📹 实时视频</button>
+           <button class="btn" id="btnVideo" style="flex:1;justify-content:center">${U.icon('video')} 实时视频</button>
            <button class="btn" id="btnNotify" style="flex:1;justify-content:center">通知机场/周边</button>
            <button class="btn" id="btnDrive" style="flex:1;justify-content:center">派发驱离</button>
            <button class="btn" id="btnRisk" style="flex:1;justify-content:center">转风险监测 →</button>
@@ -540,7 +542,7 @@
               <span style="font-size:12px;color:var(--txt-3)">光电吊舱-02 · 联动跟踪中（A07/A08）</span>
               <span><button class="btn ghost" data-act="vis" style="height:24px;font-size:11.5px">可见光</button>
               <button class="btn ghost" data-act="ir" style="height:24px;font-size:11.5px">热成像</button>
-              <button class="btn ghost" data-act="snap" style="height:24px;font-size:11.5px">📷 截图取证</button></span></div>
+              <button class="btn ghost" data-act="snap" style="height:24px;font-size:11.5px">${U.icon('camera')} 截图取证</button></span></div>
             <div id="lvVideo"></div>
             <div style="margin-top:8px;font-size:11px;color:var(--txt-3)">正式版 /api/v1/eo/stream 拉流；本画面为 Demo 模拟渲染，接口 Schema 一致。</div>
           </div>
@@ -559,9 +561,9 @@
         const cu = M.currentUser;
         return `<div style="display:flex;gap:6px;margin-bottom:8px">
               <button class="btn pri" data-ptz="begin" style="flex:1;justify-content:center"
-                ${okOp ? '' : `disabled title="当前角色「${cu.roleName}」为只读，不可下发处置动作"`}>▶ 下发跟踪</button>
+                ${okOp ? '' : `disabled title="当前角色「${cu.roleName}」为只读，不可下发处置动作"`}>${U.icon('play')} 下发跟踪</button>
               <button class="btn" data-ptz="end" style="flex:1;justify-content:center"
-                ${okOp ? '' : 'disabled'}>■ 结束跟踪</button>
+                ${okOp ? '' : 'disabled'}>${U.icon('stop')} 结束跟踪</button>
             </div>
             ${okOp ? '' : `<div class="warnbox" style="margin:0 0 8px;padding:6px 8px;font-size:10.5px;line-height:1.5">
               当前登录角色 <b>${cu.name}（${cu.roleName}）</b> 对本模块为<b>只读</b>，
@@ -569,7 +571,7 @@
       })()}
             <div id="ptzSt">${U.kv([['方位角', '118.7°'], ['俯仰角', '12.4°'], ['变倍', '8.0x'], ['云台状态', '<span class="tag t-green">就绪</span>']])}</div>
             <button class="btn ghost" data-ptz="query" style="width:100%;justify-content:center;margin:6px 0"
-              title="CameraStatus：协议表「支持」列为是、备注列疑似「暂不支持」，待设备方确认">⟳ 状态查询 CameraStatus <span class="tag t-amber" style="margin-left:4px">待确认</span></button>
+              title="CameraStatus：协议表「支持」列为是、备注列疑似「暂不支持」，待设备方确认">${U.icon('refresh')} 状态查询 CameraStatus <span class="tag t-amber" style="margin-left:4px">待确认</span></button>
             <div style="font-size:11px;color:#9ec6ff;margin-bottom:3px">指令回执</div>
             <div id="ptzLog" style="font:10px/1.7 Menlo,monospace;color:var(--txt-3);height:96px;overflow:auto;
               background:rgba(3,9,26,.7);border:1px solid var(--line-2);border-radius:5px;padding:5px 7px"></div>
@@ -603,7 +605,7 @@
             // B3:仅保留《光电设备边端协同接口》标注「支持」的事件
             if (k === 'query') {
               push('CameraStatus → az=' + ptz.az.toFixed(1) + ' el=' + ptz.el.toFixed(1) + ' zoom=' + ptz.zoom.toFixed(1) + ' state=ready', 'ok');
-              push('  ⚠ CameraStatus 支持状态待设备方确认（协议表支持列与备注列不一致）', 'warn');
+              push('注意：CameraStatus 支持状态待设备方确认（协议表支持列与备注列不一致）', 'warn');
               paintSt(); return;
             }
             if (k === 'begin') {
@@ -650,7 +652,7 @@
               paintSt('<span class="tag t-cyan">跟踪任务下发中…</span>');
               setTimeout(() => {
                 ptz.busy = false; ptz.tracking = true;
-                push('回执 ✓ 光电已接管跟踪 · 引导源 ' + bs.typeName + ' ' + bs.id
+                push('回执：光电已接管跟踪 · 引导源 ' + bs.typeName + ' ' + bs.id
                   + ' · 操作人 ' + M.currentUser.name + '(' + M.currentUser.roleName + ')'
                   + ' · 耗时 ' + CH.seeded('bt' + t.id)(300, 900) + 'ms', 'ok');
                 paintSt();
@@ -659,7 +661,7 @@
             }
             if (k === 'end') {
               ptz.tracking = false;
-              push('EndTracking { targetId:"' + t.id + '" } → 回执 ✓ 跟踪已结束', 'ok');
+              push('EndTracking { targetId:"' + t.id + '" } → 回执：跟踪已结束', 'ok');
               paintSt(); return;
             }
           });
@@ -687,7 +689,7 @@
       title: '轨迹回放 · ' + t.id + '（' + (t.trackId || '归档轨迹') + '）', width: '860px',
       body: `<div id="rpMap" style="height:340px;border:1px solid var(--line-2);border-radius:6px"></div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-          <button class="btn" data-act="toggle" id="rpPlay" style="width:64px;justify-content:center">⏸ 暂停</button>
+          <button class="btn" data-act="toggle" id="rpPlay" style="width:76px;justify-content:center">${U.icon('pause')} 暂停</button>
           <button class="btn ghost" data-act="speed" id="rpSpeed">${speed}x</button>
           <div style="flex:1;position:relative">
             <input type="range" id="rpSlider" min="0" max="${tr.length - 1}" value="0" style="width:100%;accent-color:#3d8bff">
@@ -697,9 +699,9 @@
           <label class="chk" style="margin:0"><input type="checkbox" id="rpFocus" checked>聚焦</label>
         </div>
         <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--txt-2)" id="rpInfo"></div>
-        ${alarm ? `<div style="margin-top:6px;font-size:11.5px;color:#ff8b95">⚑ 时间轴红点：${alarm.time.slice(11)} 触发「${alarm.type}」告警</div>` : ''}`,
+        ${alarm ? `<div class="inline-icon" style="margin-top:6px;font-size:11.5px;color:#ff8b95">${U.icon('flag')} 时间轴红点：${alarm.time.slice(11)} 触发「${alarm.type}」告警</div>` : ''}`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn" data-act="export">⭳ 导出回放片段</button>`,
+        <button class="btn" data-act="export">${U.icon('download')} 导出回放片段</button>`,
       mounted: el => {
         rmap = new MapView(el.querySelector('#rpMap'), { zoom: 2.2, legend: false, layers: { device: false, alarm: false } });
         const slider = el.querySelector('#rpSlider');
@@ -731,7 +733,7 @@
         }, 400);
       },
       on: {
-        toggle: el => { playing = !playing; el.querySelector('#rpPlay').textContent = playing ? '⏸ 暂停' : '▶ 播放'; },
+        toggle: el => { playing = !playing; el.querySelector('#rpPlay').innerHTML = playing ? `${U.icon('pause')} 暂停` : `${U.icon('play')} 播放`; },
         speed: el => { speed = speed === 8 ? 1 : speed * 2; el.querySelector('#rpSpeed').textContent = speed + 'x'; },
         export: () => U.toast('已导出回放片段（轨迹 GeoJSON + 告警标记），可作证据附件', 'ok')
       }

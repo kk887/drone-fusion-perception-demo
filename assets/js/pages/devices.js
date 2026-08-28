@@ -209,61 +209,6 @@
     ]
   });
 
-  /* ---------------- 模式条 ----------------
-     V1.1 §5.6 note 是红线：严禁在评审/验收场景把模拟数据当作真实感知结果呈现。
-     所以来源标识做成顶部整条状态栏（不是角落灰字）：Mock 用警示色并写明「非真实感知结果」，
-     回放标「回放」并显示原始录制时间，正式接口标「实时」并显示连通状态。 */
-  function modeBar() {
-    const m = MODES[DS.mode], sc = schemaCheck();
-    let info = '', extra = '', warn = '';
-    if (DS.mode === 'mock') {
-      warn = `<b style="color:#ffd07a">模拟数据源 · 非真实感知结果</b>
-        <span style="color:var(--txt-3)">（V1.1 §5.6：严禁在评审或验收场景中把模拟数据当作真实感知结果呈现）</span>`;
-      info = `Adapter <b class="mono">${m.adapter}</b> · 数据基准 <span class="mono">${M.util.fmtDT(M.CONF.demoTime)}</span>
-        · 全站 ${M.ifStats.mocked}/${M.ifStats.total} 个接口为 Mock 占位`;
-    } else if (DS.mode === 'replay') {
-      warn = `<b style="color:#c8a8ff">回放数据 · 非当前时刻状态</b>`;
-      info = `Adapter <b class="mono">${m.adapter}</b> · 回放库 <span class="mono">${spanTx()}</span>（每日 1 帧，共 ${SNAPS.length} 帧）`;
-      extra = `<span style="color:var(--txt-2)">原始录制时间</span>
-        <span class="btn" data-snap="-1" title="上一帧" style="padding:0 9px">‹</span>
-        <b class="mono" style="color:${m.color};font-size:13px">${snapKey()}</b>
-        <span class="btn" data-snap="1" title="下一帧" style="padding:0 9px">›</span>
-        <span class="tag t-gray">第 ${DS.snapIdx + 1}/${SNAPS.length} 帧 · 距今 ${SNAPS.length - DS.snapIdx} 天</span>
-        <span class="tag t-purple">只读</span>
-        <span style="color:var(--txt-3)">录制源：设备心跳与状态上报（同一 Schema，仅取数时刻不同）</span>`;
-    } else {
-      const p = DS.probe, ok = probeOk();
-      warn = ok ? `<b style="color:#79e5a5">实时数据 · 来自正式环境接口</b>`
-        : `<b style="color:#ff96a0">正式接口未连通 · 页面如实显示无数据（未用 Mock 兜底）</b>`;
-      info = `Adapter <b class="mono">${m.adapter}</b> · 端点 <span class="mono">${p.endpoint}</span>`;
-      extra = `<span style="color:var(--txt-2)">接口连通状态</span>
-        <span class="tag ${ok ? 't-green' : 't-red'}">${ok ? '已连通' : '未连通'} ${ok}/${p.items.length} 通道</span>
-        <span style="color:var(--txt-3)">探测于 ${p.at}</span>
-        <span class="lnk" id="dsProbeDetail">探测详情 ›</span>
-        <span class="btn" id="dsReprobe" style="padding:0 9px">↻ 重新探测</span>
-        <span class="btn warn" id="dsBack" style="padding:0 9px">↩ 切回 Mock</span>`;
-    }
-    return `<section class="panel mb12" style="flex:none;border-color:${m.color}99;
-        box-shadow:inset 4px 0 0 ${m.color};background:linear-gradient(90deg,${m.color}1f,var(--panel) 46%)">
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;flex-wrap:wrap;font-size:12.5px">
-        <span class="tag ${m.tag}" style="font-size:13px;padding:2px 10px;font-weight:600">● 数据来源：${m.mark}｜${m.name}</span>
-        ${warn}
-        <span style="flex:1;min-width:12px"></span>
-        <span class="tag ${sc.same ? 't-green' : 't-red'}" title="三种模式必须返回同一 Schema：实测比对 MockAdapter 与 ReplayAdapter 的字段集合">
-          Schema 一致 ${sc.n} 字段 ${sc.same ? '✓' : '✗ ' + sc.diff.join(',')}</span>
-        <button class="btn pri" id="dsSwitch">⇄ 切换数据源</button>
-        <button class="btn" id="dsLog">▤ 切换留痕 (${DS.log.length})</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;flex-wrap:wrap;font-size:12px;
-        border-top:1px solid var(--line-2);color:var(--txt-3)">
-        ${info}<span style="flex:1;min-width:8px"></span>
-        <span>最近切换：${DS.by} · ${DS.since} · ${DS.reason}</span>
-      </div>
-      ${extra ? `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;flex-wrap:wrap;
-        font-size:12.5px;border-top:1px solid var(--line-2);background:${m.color}14">${extra}</div>` : ''}
-    </section>`;
-  }
-
   /* ---------------- 页面 ---------------- */
   /* =========================================================================
    * 表头排序
@@ -316,8 +261,7 @@
     const dash = v => D.total ? v : '—';
     st.sel = (st.sel && all.find(d => d.id === st.sel.id)) || all[0] || null;
     const noData = !D.total;
-    return `${modeBar()}
-    ${U.kpis([
+    return `${U.kpis([
       { label: '设备总数', value: dash(U.num(D.total)), color: 'blue', icon: 'device', desc: noData ? '正式接口未连通' : '在线 + 离线 + 异常' },
       { label: '在线数', value: dash(U.num(D.online)), color: 'green', icon: 'check', desc: noData ? '—' : `在线率 ${D.onlineRate}%` },
       { label: '离线数', value: dash(U.num(D.offline)), color: 'gray', icon: 'alert', desc: noData ? '—' : `离线率 ${D.offlineRate}%` },
@@ -338,9 +282,9 @@
           ${U.field('供应商', U.select('vendor', ['全部', ...VENDORS], st.vendor))}
           ${U.field('在线状态', U.select('status', ['全部', '在线', '离线', '异常'], st.status))}
           <input class="ip" id="dvKw" style="width:170px" placeholder="请输入设备编号/名称" value="${st.kw}">
-          <button class="btn pri" id="dvAdd" ${writable() ? '' : 'disabled'}>＋ 新增设备</button>
+          <button class="btn pri" id="dvAdd" ${writable() ? '' : 'disabled'}>${U.icon('plus')} 新增设备</button>
           <button class="btn" id="dvImp" ${writable() ? '' : 'disabled'}>⭱ 批量导入</button>
-          <button class="btn" id="dvExp">⭳ 导出</button>
+          <button class="btn" id="dvExp">${U.icon('download')} 导出</button>
         </div>
         <div id="dvList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
@@ -373,7 +317,7 @@
       },
       {
         /* 型号是「【待确认：设备方提供】」这种长占位串，nowrap 下它就是本表最小宽度的来源之一 */
-        t: sortTh('型号 / 供应商', 'vendor'), w: '128px',
+        t: sortTh('型号 / 供应商', 'vendor'), w: '128px', priority: 'optional',
         render: d => `<div title="${d.model}" style="white-space:normal;line-height:1.4;font-size:11.5px;
             max-height:33px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${d.model}</div>
           <div style="font-size:11px;color:var(--txt-3)">${d.vendor}</div>`
@@ -383,7 +327,7 @@
         render: d => `<div style="color:${d.status === '在线' ? '#79e5a5' : d.status === '离线' ? '#a8bcd8' : '#ff8b95'}">${U.dotState(d.status)}</div>
           <div style="margin-top:2px">${U.tag(d.health)}</div>`
       },
-      { t: sortTh('最后心跳', 'hb'), w: '78px', cls: 'num', render: d => d.hb.slice(11) },
+      { t: sortTh('最后心跳', 'hb'), w: '78px', cls: 'num', priority: 'optional', render: d => d.hb.slice(11) },
       {
         t: '操作', w: '132px', render: d => `<span class="lnk" data-op="view|${d.id}">查看</span>` +
           (ro ? `<span class="lnk" style="color:var(--txt-3);cursor:not-allowed" title="非 Mock 数据源不可写">编辑</span>
@@ -403,12 +347,12 @@
     if (st.tab === 'pos') {
       body = `<div id="dvMap" style="height:200px;margin-bottom:12px;border:1px solid var(--line-2);border-radius:6px"></div>
         ${U.kv([['经度', `<span class="mono">${d.lon.toFixed(6)}° E</span>`], ['纬度', `<span class="mono">${d.lat.toFixed(6)}° N</span>`],
-      ['安装高度', d.alt + ' m'], ['坐标系', M.CONF.coordSys], ['安装位置', d.addr], ['所属区域', d.region]])}`;
+      ['安装高度', d.alt + ' m'], ['坐标系', M.CONF.coordSys], ['安装位置', d.addr], ['所属区域', d.region]], { surface: true, density: 'compact' })}`;
     } else if (st.tab === 'base') {
       body = U.kv([['设备型号', d.model], ['设备品类', d.cat], ['供应商', d.vendor], ['产权单位', d.owner],
       ['接入通道', d.channel], ['安装时间', d.installed], ['工作频段', d.freq], ['覆盖半径', d.cover],
       ['固件版本', d.fw], ['设备状态', d.status + (d.alarm ? ' · 告警中' : '')], ['健康状态', d.health],
-      ['最后心跳', d.hb + `（${d.hbMin} 分钟前）`]]);
+      ['最后心跳', d.hb + `（${d.hbMin} 分钟前）`]], { surface: true, density: 'compact' });
     } else if (st.tab === 'api') {
       body = U.kv([['通信方式', d.proto], ['IP 地址', `<span class="mono">${d.ip}</span>`], ['端口', `<span class="mono">${d.port}</span>`],
       ['接入地址', `<span class="mono">${d.proto === 'TCP' ? 'tcp://' + d.ip + ':' + d.port
@@ -416,7 +360,7 @@
       ['鉴权方式', d.channel === '5G-A' ? 'AK/SK' : 'Token'], ['心跳间隔', '30 s'], ['上报周期', '1000 ms'],
       ['数据格式', 'JSON'], ['时钟同步', 'NTP · ntp.dongying.gov.cn'],
       ['当前时延', d.latency == null ? '—' : d.latency + ' ms'], ['丢包率', d.loss == null ? '—' : d.loss + ' %'],
-      ['信号强度', d.rssi + ' dBm']])
+      ['信号强度', d.rssi + ' dBm']], { surface: true, density: 'compact' })
         + `<div style="margin-top:10px;display:flex;gap:8px">
           <button class="btn" style="flex:1;justify-content:center" data-dv="test">连通性测试</button>
           <button class="btn" style="flex:1;justify-content:center" onclick="location.hash='#/commission'">进入调测 →</button></div>`;
@@ -424,15 +368,19 @@
       const near = M.airspaces.filter(a => Math.abs(a.center.lon - d.lon) < .25 && Math.abs(a.center.lat - d.lat) < .25);
       body = U.kv([['所属区域', d.region], ['覆盖空域', near.length ? near.map(a => a.name).join('<br>') : '未覆盖管制空域'],
       ['关联案件(近30天)', M.cases.filter(c => c.district === d.region).length + ' 件'],
-      ['区域目标(近30天)', M.allTargets.filter(t => t.district === d.region).length + ' 个']]);
+      ['区域目标(近30天)', M.allTargets.filter(t => t.district === d.region).length + ' 个']], { surface: true, density: 'compact' });
     }
-    return `<div style="padding:12px 12px 0">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <b style="font-size:14px">${d.name}</b>${U.tag(d.status)}</div>
-        <div class="mono" style="color:var(--txt-3);font-size:12px;margin-bottom:${DS.mode === 'mock' ? '10px' : '6px'}">设备编号：${d.id}</div>
-        ${DS.mode === 'replay' ? `<div class="tag t-purple" style="margin-bottom:10px">回放 · 原始录制时间 ${snapKey()} · 只读</div>`
-        : DS.mode === 'live' ? `<div class="tag t-green" style="margin-bottom:10px">实时 · 正式接口</div>` : ''}
-      </div>
+    return `<div style="padding:12px 12px 0">${U.detailHero({
+        icon: 'device', subtitle: '设备详情', title: d.name, id: d.id,
+        tags: [U.tag(d.status), U.tag(d.health), DS.mode === 'replay' ? U.tag('回放', 't-purple') : DS.mode === 'live' ? U.tag('实时', 't-green') : ''],
+        meta: [['区域', d.region], ['通道', d.channel]]
+      })}
+      ${U.metricStrip([
+        { label: '在线状态', value: d.status, tone: d.status === '在线' ? 'good' : d.status === '异常' ? 'bad' : 'warn', icon: 'device' },
+        { label: '健康度', value: d.health, tone: d.health === '良好' ? 'good' : 'warn', icon: 'shield' },
+        { label: '最后心跳', value: d.hb.slice(11), sub: d.hbMin + ' 分钟前', icon: 'clock' },
+        { label: '链路时延', value: d.latency == null ? '—' : d.latency, unit: d.latency == null ? '' : 'ms', tone: d.latency != null && d.latency > 150 ? 'warn' : 'info', icon: 'trend' }
+      ], { compact: true })}</div>
       <div class="tabs" style="padding:0 12px">${tabs.map(([k, t]) => `<span class="tab ${st.tab === k ? 'on' : ''}" data-tab="${k}">${t}</span>`).join('')}</div>
       <div style="padding:12px">${body}</div>`;
   }
@@ -498,20 +446,6 @@
     document.getElementById('dvExp').onclick = () => U.toast(`已导出「设备台账.xlsx」共 ${filtered().length} 条（数据源：${MODES[DS.mode].name}${DS.mode === 'replay' ? ' @ ' + snapKey() : ''}）`, 'ok');
     document.getElementById('dvGoMon').onclick = () => location.hash = '#/monitor';
 
-    /* ---- B7 数据源切换 ---- */
-    document.getElementById('dsSwitch').onclick = switchModal;
-    document.getElementById('dsLog').onclick = logModal;
-    U.on(view, '[data-snap]', 'click', (e, el) => seek(+el.dataset.snap));
-    const pd = document.getElementById('dsProbeDetail'); if (pd) pd.onclick = probeModal;
-    const rp = document.getElementById('dsReprobe'); if (rp) rp.onclick = () => {
-      DS.probe = probe();
-      record('探测', MODES.live.name, MODES.live.name, DS.by, '重新探测正式接口连通性',
-        probeOk() ? '成功' : '失败', `${probeOk()}/${DS.probe.items.length} 通道连通 · 端点 ${DS.probe.endpoint}`);
-      g.APP.rerender();
-      U.toast(`连通性探测完成：${probeOk()}/${DS.probe.items.length} 通道连通`, probeOk() ? 'ok' : 'err');
-    };
-    const bk = document.getElementById('dsBack'); if (bk) bk.onclick = () =>
-      applySwitch('mock', { by: DS.by, reason: '正式接口未连通，回退至 Mock 数据源' });
   }
 
   /* ---- 留痕：追加一条记录（只增不改） ---- */
@@ -646,7 +580,7 @@
         }
       ], DS.log, { maxH: '360px' })}`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn pri" data-act="exp">⭳ 导出留痕</button>`,
+        <button class="btn pri" data-act="exp">${U.icon('download')} 导出留痕</button>`,
       on: { exp: () => U.toast('已导出「数据源切换留痕.xlsx」共 ' + DS.log.length + ' 条', 'ok') }
     });
   }

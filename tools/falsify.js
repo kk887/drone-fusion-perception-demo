@@ -29,13 +29,14 @@
       守护已消失字段的断言 —— 那正是我们在治的"条目挂着但问题早没了"。
 */
 const path = require('path');
+const MOCK_FILE = path.join(__dirname, '..', 'assets', 'js', 'mock.js');
 const VERBOSE = process.argv.includes('--verbose');
 const C = { r: '\x1b[31m', g: '\x1b[32m', y: '\x1b[33m', d: '\x1b[90m', b: '\x1b[1m', x: '\x1b[0m' };
 
 function load() {
-  delete require.cache[require.resolve('../dongying-demo/assets/js/mock.js')];
+  delete require.cache[require.resolve(MOCK_FILE)];
   global.window = {};
-  require('../dongying-demo/assets/js/mock.js');
+  require(MOCK_FILE);
   return global.window.MOCK;
 }
 
@@ -302,7 +303,7 @@ const INJECTIONS = [
    一个把好断言也标红的筛子，最后的结果是没人看它 —— 这正是我们在治的病。 */
 function staticScreen() {
   const fs = require('fs');
-  const src = fs.readFileSync(path.join(__dirname, '../dongying-demo/assets/js/mock.js'), 'utf8');
+  const src = fs.readFileSync(MOCK_FILE, 'utf8');
   const sc = src.indexOf('function selfCheck');
   const body = src.slice(sc);
   const build = src.slice(0, sc);                       // 数据构造区（selfCheck 之前）

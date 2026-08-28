@@ -42,7 +42,7 @@
     if (!dev) return `${U.panel({
       title: '设备接入调测', style: 'flex:none',
       body: `<div class="warnbox" style="line-height:1.9">
-        ⚠ <b>设备清单中没有雷达设备，本页无调测对象。</b><br>
+        <b>注意：设备清单中没有雷达设备，本页无调测对象。</b><br>
         此处<b>不会退而选用其他类型的设备顶替</b> —— 那会让链路指标、调测报告、配置项
         全部挂在一台并非被调测对象的设备上，而界面上看不出换了对象。<br>
         <span style="color:var(--txt-3)">请先在「设备管理」中登记雷达设备。</span></div>`
@@ -52,7 +52,7 @@
       title: false, style: 'flex:none;margin-bottom:12px',
       body: `<div class="steps" id="cmSteps">${STEPS.map(([n, d], i) =>
         `<div class="st ${i < step ? 'done' : ''} ${i === step ? 'act' : ''}" data-step="${i}">
-          <div class="c">${i < step ? '✓' : i + 1}</div><div class="n">${n}</div><div class="t">${d}</div></div>`).join('')}</div>`
+          <div class="c">${i < step ? U.icon('check') : i + 1}</div><div class="n">${n}</div><div class="t">${d}</div></div>`).join('')}</div>`
     })}
 
     <div class="row mb12" style="height:560px;flex:none">
@@ -75,12 +75,12 @@
           <!-- 5 个按钮在 517px 的面板里放不下（我加「跳过动画」后 545px），
                .panel>.pb 本身是 overflow:auto，于是这一行把整个面板体撑出 28px。
                允许换行即可 —— 按钮换行比横滚可用。 -->
-          <div style="padding:10px 12px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn pri" id="cmStart">▶ 开始测试</button>
-            <button class="btn" id="cmSkip" title="跳过逐步动画，直接跑完全部 6 步并出结果">⏭ 跳过动画</button>
-            <button class="btn" id="cmSave">💾 保存参数</button>
-            <button class="btn" id="cmReconn">⟳ 重新连接</button>
-            <button class="btn" id="cmReport" disabled title="需先完成 6 步调测流程（当前未开始）">📄 生成调测报告</button>
+          <div class="detail-actions" style="margin:0;border-width:1px 0 0;border-radius:0;flex-wrap:wrap;justify-content:flex-start">
+            <button class="btn pri" id="cmStart">${U.icon('play')} 开始测试</button>
+            <button class="btn" id="cmSkip" title="跳过逐步动画，直接跑完全部 6 步并出结果">${U.icon('skip')} 跳过动画</button>
+            <button class="btn" id="cmSave">${U.icon('save')} 保存参数</button>
+            <button class="btn" id="cmReconn">${U.icon('refresh')} 重新连接</button>
+            <button class="btn" id="cmReport" disabled title="需先完成 6 步调测流程（当前未开始）">${U.icon('file')} 生成调测报告</button>
           </div>`
     })}
 
@@ -116,14 +116,21 @@
 
   function info() {
     if (!dev) return `<div style="color:#ffd07a;font-size:12.5px;line-height:1.8">
-      ⚠ 设备清单中没有雷达设备，无法确定调测对象。<br>
+      注意：设备清单中没有雷达设备，无法确定调测对象。<br>
       <span style="color:var(--txt-3)">此处不会退而选用其他类型的设备顶替 —— 那会让本页的链路指标与调测报告
       挂在一台并非被调测对象的设备上，而界面看不出换了对象。请在左侧设备树中手动选择。</span></div>`;
-    return U.kv([['设备名称', dev.name], ['设备类型', dev.type], ['设备型号', dev.model],
+    return U.detailHero({
+      icon: 'tool', variant: 'micro', subtitle: '接入调测设备', title: dev.name, id: dev.id,
+      tags: [U.tag(dev.status), U.tag(dev.type, 't-cyan')], meta: [['区域', dev.region]]
+    }) + U.metricStrip([
+      { label: '连接状态', value: running ? '测试中' : dev.status, tone: dev.status === '在线' ? 'good' : 'warn', icon: 'link' },
+      { label: '设备类型', value: dev.type, icon: 'device' },
+      { label: '固件版本', value: dev.fw, icon: 'file' }
+    ], { compact: true }) + U.kv([['设备名称', dev.name], ['设备类型', dev.type], ['设备型号', dev.model],
     ['IP 地址', `<span class="mono">${dev.ip}</span>`], ['所属区域', dev.region],
     ['供应商', dev.vendor], ['设备编号', `<span class="mono">${dev.id}</span>`],
     ['固件版本', dev.fw], ['接入时间', dev.installed + ' 14:32:18'],
-    ['设备状态', U.dotState(dev.status)]]);
+    ['设备状态', U.dotState(dev.status)]], { surface: true, density: 'compact' });
   }
 
   function cfg() {
@@ -286,7 +293,7 @@
     document.getElementById('cmList').innerHTML = listBody();
     document.querySelectorAll('#cmSteps .st').forEach((el, i) => {
       el.classList.toggle('done', i < step); el.classList.toggle('act', i === step);
-      el.querySelector('.c').textContent = i < step ? '✓' : i + 1;
+      el.querySelector('.c').innerHTML = i < step ? U.icon('check') : i + 1;
     });
     const cal = document.getElementById('cmCal');
     if (cal) cal.onclick = () => U.toast('坐标校准工具：请在地图上选取 3 个已知控制点（Demo）');
@@ -358,7 +365,7 @@
             cost: '00:' + M.util.p2(Math.floor(elapsed() / 60)) + ':' + M.util.p2(elapsed() % 60),
             operator: ((M.users && M.users[0]) || { name: '管理员' }).name
           };
-          U.toast('✅ 设备调测完成，可生成调测报告', 'ok');
+          U.toast(`${U.icon('check')} 设备调测完成，可生成调测报告`, 'ok');
           running = false;
           document.getElementById('cmState').className = 'tag t-green';
           document.getElementById('cmState').textContent = '已完成';
@@ -448,7 +455,7 @@
        「生成调测报告」立刻从置灰变可点，报告照出。闸门形同虚设。
        进度只能由实际测试推进，步骤条改为只读展示。 */
     U.on(view, '[data-step]', 'click', () => U.toast(
-      running ? '调测进行中，进度由测试自动推进' : '进度由「▶ 开始测试」推进，不能手动跳步', 'err'));
+      running ? '调测进行中，进度由测试自动推进' : '进度由「开始测试」推进，不能手动跳步', 'err'));
     U.on(view, '[data-ct]', 'click', (e, el) => {
       tab = el.dataset.ct; page = 1;
       view.querySelectorAll('[data-ct]').forEach(x => x.classList.toggle('on', x === el));
@@ -573,7 +580,7 @@
               <b style="color:#79e5a5">结论：通过。</b>各分项实测值均在当前阈值内，设备可投入运行。</div>`}
         ${R.mismatch && !t.live
           ? `<div class="warnbox" style="border-color:rgba(255,176,32,.55);margin-top:10px;line-height:1.85">
-              <b>⚠ 本条记录的判定结果与按调测项推导的结论不一致。</b><br>
+              <b>注意：本条记录的判定结果与按调测项推导的结论不一致。</b><br>
               记录写的是「<b>${t.result}</b>」，按本报告所列调测项推导应为「<b>${R.derivedFail ? '失败' : '成功'}</b>」。<br>
               ${!/通信测试/.test(t.content) && (t.failedItems || []).length
                 ? `具体成因：本次<b>调测项为「${t.content}」，不含通信测试</b>，
@@ -585,7 +592,7 @@
           : ''}
         ${U.kv([['签署', '平台团队：' + t.operator + ' ／ 设备方：待签署']])}`,
       footer: `<button class="btn" data-close>关闭</button>
-        <button class="btn" data-act="dl">⭳ 下载 PDF</button>`,
+        <button class="btn" data-act="dl">${U.icon('download')} 下载 PDF</button>`,
       on: { dl: () => U.toast('正式环境将导出《设备调测报告》PDF 并归档进证据台账；Demo 不生成文件', 'err') }
     });
   }

@@ -71,7 +71,7 @@
       </div>`;
     box.innerHTML = `<canvas></canvas>
       <div class="mapctl">
-        <div class="mb" data-z="in" role="button" aria-label="放大">+</div><div class="mb" data-z="out" role="button" aria-label="缩小">−</div><div class="mb" data-z="fit" role="button" aria-label="复位">⤢</div>
+        <div class="mb" data-z="in" role="button" aria-label="放大">${g.UI.icon('zoomIn')}</div><div class="mb" data-z="out" role="button" aria-label="缩小">${g.UI.icon('zoomOut')}</div><div class="mb" data-z="fit" role="button" aria-label="复位">${g.UI.icon('expand')}</div>
       </div>
       ${legendHtml}
       <div class="maptip"></div>
@@ -260,7 +260,7 @@
 
   MapView.prototype._drawTiles = function (c, W, H) {
     const z = this.tileZ, T = g.GEO.TILE;
-    c.fillStyle = '#0a1424'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#0d1a2e'; c.fillRect(0, 0, W, H);
     /* 取瓦片范围必须与绘制位置用同一套偏移：绘制时 dx = x*T - originX + ox，
        所以可视区对应的世界像素范围是 [originX-ox, originX-ox+W]。
        若此处漏掉 ox/oy，取来的瓦片会被画到视口外——请求全部 200 OK 却什么都看不到。 */
@@ -290,10 +290,11 @@
         c.drawImage(img, dx, dy, T, T);
       }
     }
-    /* 深色主题适配：压暗并偏蓝，既保留路网与地名的可读性，又让叠加的目标/告警足够醒目 */
-    c.fillStyle = 'rgba(8,20,46,.42)'; c.fillRect(0, 0, W, H);
-    c.globalCompositeOperation = 'saturation';
-    c.fillStyle = 'hsl(210,42%,50%)'; c.fillRect(0, 0, W, H);
+    /* 深色主题适配：保留蓝色基调，但适当减轻压暗，让路网与地名更清楚。 */
+    c.globalCompositeOperation = 'multiply';
+    c.fillStyle = 'rgba(5,20,39,.40)'; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'color';
+    c.fillStyle = 'hsl(211,52%,29%)'; c.fillRect(0, 0, W, H);
     c.globalCompositeOperation = 'source-over';
     if (pending) {
       c.font = '11px "PingFang SC"'; c.fillStyle = 'rgba(159,182,217,.7)'; c.textAlign = 'left';
@@ -316,7 +317,7 @@
     if (this.tiles) { this._drawTiles(c, W, H); }
     else {
       const gr = c.createLinearGradient(0, 0, 0, H);
-      gr.addColorStop(0, '#07162f'); gr.addColorStop(1, '#04101f');
+      gr.addColorStop(0, '#0a1d3b'); gr.addColorStop(1, '#06162a');
       c.fillStyle = gr; c.fillRect(0, 0, W, H);
     }
     if (this.tiles) { this._drawOverlays(c, W, H); return; }
@@ -326,7 +327,7 @@
     COAST.forEach((p, i) => { const q = P(p[0], p[1]); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); });
     const e1 = P(B.lon1 + 1, B.lat0 - 1), e2 = P(B.lon1 + 1, B.lat1 + 1);
     c.lineTo(e1[0], e1[1]); c.lineTo(e2[0], e2[1]); c.closePath();
-    c.fillStyle = 'rgba(9,42,84,.75)'; c.fill();
+    c.fillStyle = 'rgba(12,54,101,.75)'; c.fill();
     c.strokeStyle = 'rgba(90,170,230,.5)'; c.lineWidth = 1.2; c.stroke();
 
     /* 经纬网 */
@@ -378,10 +379,12 @@
       for (let x = bb[0] - (bb[3] - bb[1]); x < bb[2]; x += 8) { c.beginPath(); c.moveTo(x, bb[1]); c.lineTo(x + (bb[3] - bb[1]), bb[3]); c.stroke(); }
       c.restore();
       const ctr = P(a.center.lon, a.center.lat);
-      c.font = '12px "PingFang SC"'; c.fillStyle = a.color; c.textAlign = 'center';
-      c.fillText(a.type, ctr[0], ctr[1] - 7);
-      c.font = '10.5px Menlo'; c.fillStyle = a.color + 'cc';
-      c.fillText(a.id + (a.limit ? ' · ' + a.limitTx : ''), ctr[0], ctr[1] + 8);
+      if (this.opt.showAirspaceLabels !== false) {
+        c.font = '12px "PingFang SC"'; c.fillStyle = a.color; c.textAlign = 'center';
+        c.fillText(a.type, ctr[0], ctr[1] - 7);
+        c.font = '10.5px Menlo'; c.fillStyle = a.color + 'cc';
+        c.fillText(a.id + (a.limit ? ' · ' + a.limitTx : ''), ctr[0], ctr[1] + 8);
+      }
       picks.push({
         x: ctr[0], y: ctr[1], kind: 'airspace', data: a,
         tip: `<b style="color:${a.color}">${a.name}</b><dl class="kv" style="margin-top:6px">
@@ -448,7 +451,7 @@
           c.setLineDash([]);
           if (bridgeLabelAt && (t.tracked || this.sel === t.id)) {
             c.font = '9.5px "PingFang SC"'; c.fillStyle = '#ffb083'; c.textAlign = 'left';
-            c.fillText('⚠ 断裂-弥合', bridgeLabelAt[0] + 6, bridgeLabelAt[1] - 5);
+            c.fillText('注意：断裂-弥合', bridgeLabelAt[0] + 6, bridgeLabelAt[1] - 5);
           }
           const s = P(tr[0].lon, tr[0].lat);
           c.beginPath(); c.arc(s[0], s[1], 3, 0, 7); c.fillStyle = '#2fd06e'; c.fill();
@@ -471,7 +474,7 @@
         }
         c.restore();
         c.beginPath(); c.arc(q[0], q[1], 2.4, 0, 7); c.fillStyle = col; c.fill();
-        if (t.tracked || this.sel === t.id || (this.data.targets || []).length <= 8) {
+        if (this.opt.showTargetLabels !== false && (t.tracked || this.sel === t.id || (this.data.targets || []).length <= 8)) {
           c.font = '10.5px Menlo'; c.textAlign = 'left';
           c.fillStyle = 'rgba(4,10,26,.8)'; c.fillRect(q[0] + 11, q[1] - 16, 62, 12);
           c.fillStyle = col; c.fillText(t.id.slice(-9), q[0] + 13, q[1] - 7);

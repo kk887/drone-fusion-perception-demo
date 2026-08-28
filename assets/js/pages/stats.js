@@ -14,8 +14,8 @@
       ${U.field('目标类型', U.select('tt', ['全部类型', ...M.T_TYPES.map(x => x[0])]))}
       ${U.field('区域', U.select('rg', ['全部区域', ...M.DISTRICTS.map(d => d.name)]))}
       <span style="flex:1"></span>
-      <button class="btn" id="stExp">⭳ 导出数据</button>
-      <button class="btn pri" id="stRep">⭳ 报表下载</button>
+      <button class="btn" id="stExp">${U.icon('download')} 导出数据</button>
+      <button class="btn pri" id="stRep">${U.icon('download')} 报表下载</button>
     </div></div>
 
     ${U.kpis([

@@ -266,8 +266,8 @@
     const dims = (t.facts && t.facts.planMatchDims) || t.plan_match_dims || null;
     const dimLine = () => {
       if (!dims) return '';
-      const mark = v => v === true ? '<span style="color:#2fd06e">✓</span>'
-        : v === false ? '<span style="color:#ff8b95">✕</span>'
+      const mark = v => v === true ? '<span style="color:#2fd06e">' + U.icon('check') + '</span>'
+        : v === false ? '<span style="color:#ff8b95">' + U.icon('cross') + '</span>'
           : '<span style="color:#ffd07a" title="无判据可依">?</span>';
       return '<div style="margin-top:3px;font-size:11.5px">'
         + (M.C01_DIMS || Object.keys(dims)).map(d => `${mark(dims[d])} ${d}`).join('　') + '</div>';
@@ -330,7 +330,7 @@
     const c02eMsg = hasV(t, '夜间飞行')
       ? `发现时间 ${t.time.slice(11, 19)}，判为夜间飞行`
       + (isNight ? `（夜间管制时段 ${C02P.nightFrom}:00–0${C02P.nightTo}:00，阈值待业务方确认）`
-        : `<br><span style="color:#ff9aa4">⚠ 但该时间不在夜间管制时段内 —— 数据层结论与观测时间不一致，需核对</span>`)
+        : `<br><span style="color:#ff9aa4">注意：但该时间不在夜间管制时段内 —— 数据层结论与观测时间不一致，需核对</span>`)
       : `发现时间 ${t.time.slice(11, 19)}，`
       + (isNight ? `<span style="color:#ffd07a">处于夜间管制时段（${C02P.nightFrom}:00–0${C02P.nightTo}:00），但本次未标注夜间违规 —— 夜间是否一律受限【待确认：业务方】</span>`
         : `不在夜间管制时段（${C02P.nightFrom}:00–0${C02P.nightTo}:00，阈值待业务方确认）`);
@@ -675,10 +675,10 @@
           const to = fixed || (el.querySelector('[data-rvto]') || {}).value || '';
           const reason = ((el.querySelector('[data-rvre]') || {}).value || '').trim();
           const err = el.querySelector('#rvErr');
-          if (!to) { err.textContent = '⚠ 请选择新判定结果'; return; }
-          if (!reason) { err.textContent = '⚠ 改判理由为必填项，不填不允许提交（设计 8.6）'; return; }
-          if (reason.length < 5) { err.textContent = '⚠ 改判理由不少于 5 个字，需写明复核依据'; return; }
-          if (to === t.legal) { err.textContent = '⚠ 新判定与当前判定相同，如仅确认原判定请使用「人工确认」'; return; }
+          if (!to) { err.textContent = '请选择新判定结果'; return; }
+          if (!reason) { err.textContent = '改判理由为必填项，不填不允许提交（设计 8.6）'; return; }
+          if (reason.length < 5) { err.textContent = '改判理由不少于 5 个字，需写明复核依据'; return; }
+          if (to === t.legal) { err.textContent = '新判定与当前判定相同，如仅确认原判定请使用「人工确认」'; return; }
           const sa = el.querySelector('[data-rvsa]'), sc = el.querySelector('[data-rvsc]');
           applyReview(t, to, reason, mode === 'false' ? '判定误报改判' : '人工改判');
           const synced = syncLinked(t, to, OPER, !!(sa && sa.checked), !!(sc && sc.checked && !sc.disabled));
@@ -855,7 +855,7 @@
             `<button class="btn warn" data-act="pick" data-id="${r.id}" style="height:24px;font-size:11.5px;padding:0 8px">查看并处理</button>`
         }
       ], rows, { rowId: r => r.id }) : (done.length ? '' : `<div class="warnbox" style="border-color:rgba(47,208,110,.4);background:rgba(47,208,110,.08)">
-          ✓ <b>当前无因身份证据不足而降级的判定（0 条）。</b><br>
+          ${U.icon('check')} <b>当前无因身份证据不足而降级的判定（0 条）。</b><br>
           本台账用于<b>监测 C01 身份维度的数据源可用性</b>：若协议破解(dcd) / RemoteID(rid) 设备未部署或数据中断，
           相关判定会自动降级并在此列出。<br>
           <span style="color:var(--txt-3)">保持 0 条即表示身份数据源可用、没有"证据不足却判非法"的目标 ——
@@ -964,8 +964,8 @@
           ${U.field('判定结果', U.select('legal', ['全部', ...DISPLAY_STATUSES], st.legal))}
           ${U.field('区域', U.select('region', ['全部', ...M.DISTRICTS.map(d => d.name)], st.region))}
           <span style="flex:1"></span>
-          <button class="btn" id="lgRule">⚙ 规则显示</button>
-          <button class="btn" id="lgRecalc">⟳ 重新判定</button>
+          <button class="btn" id="lgRule">${U.icon('settings')} 规则显示</button>
+          <button class="btn" id="lgRecalc">${U.icon('refresh')} 重新判定</button>
         </div>
         <div id="lgList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
@@ -1000,7 +1000,7 @@
         /* 两个标签纵向堆叠：并排会把这一格撑到 125px（td 是 nowrap，声明宽度压不住内容） */
         t: '判定 / 风险', w: '84px', render: t => U.legal(t.legal)
           + `<div style="margin-top:2px">${U.risk(t.risk)}</div>`
-          + (needGate(t) ? ` <span title="身份依据缺失，证据不足" style="color:#ff8b95">⚠</span>` : '')
+          + (needGate(t) ? ` <span title="身份依据缺失，证据不足" style="color:#ff8b95">${U.icon('warning')}</span>` : '')
           + (manualRevised(t) ? `<div style="font-size:10.5px;color:#c8adff;margin-top:2px" title="原判定 ${engOf(t)}，已人工改判">人工改判</div>`
             : engineDegraded(t) ? `<div style="font-size:10.5px;color:#ffd07a;margin-top:2px" title="原判定 ${engOf(t)}，因身份依据缺失由引擎证据门禁降级">证据降级</div>` : '')
       },
@@ -1028,10 +1028,10 @@
     const ev = j.ev;
     return U.sect(`身份数据源可用性 <span class="tag ${ev.full ? 't-green' : 't-amber'}">${ev.full ? '完整判定' : '降级判定'}</span>`,
       `${ev.full ? `<div class="warnbox" style="border-color:rgba(47,208,110,.45);background:rgba(47,208,110,.10);
-          color:#a7edc4;margin-bottom:9px">✓ <b>身份判定：完整</b> —— 已取得实名编号
+          color:#a7edc4;margin-bottom:9px">${U.icon('check')} <b>身份判定：完整</b> —— 已取得实名编号
           <span class="mono">${esc(ev.sn)}</span>（来源：${ev.dev} 设备），可执行 uavSN 实名核验。</div>`
         : `<div class="warnbox" style="margin-bottom:9px;font-size:13px;line-height:1.75">
-          ⚠ <b>身份判定：降级</b> —— 本次判定<b>未取得 uav_sn（无人机实名编号）</b>。
+          注意：<b>身份判定：降级</b> —— 本次判定<b>未取得 uav_sn（无人机实名编号）</b>。
           按协议，uav_sn 只有<b>协议破解 dcd(11)</b> 与 <b>RemoteID rid(102)</b> 能提供；
           雷达/光电给不出任何身份信息，TDOA/AOA 只能给型号线索。<br>
           → 身份匹配<b>降级为「时间窗 + 空间范围」</b>，<b>不足以支撑「身份不匹配」定性</b>；
@@ -1045,7 +1045,7 @@
           <td style="white-space:normal">${r.s.type}
             <div class="mono" style="color:var(--txt-3);font-size:10.5px">${r.s.abbr}(${r.s.dt}) · ${r.d.online}/${r.d.total}</div></td>
           <td style="white-space:normal;font-size:11.5px;color:var(--txt-2)">${r.s.gives}</td>
-          <td style="white-space:normal;font-size:11.5px;color:${r.ok ? '#7fe6a6' : 'var(--txt-3)'}">${r.ok ? '✓ ' : ''}${r.got}</td>
+          <td style="white-space:normal;font-size:11.5px;color:${r.ok ? '#7fe6a6' : 'var(--txt-3)'}">${r.ok ? U.icon('check') + ' ' : ''}${r.got}</td>
         </tr>`).join('')}
       </tbody></table>
       <div style="margin-top:7px;font-size:11.5px;color:var(--txt-3);line-height:1.75">
@@ -1126,7 +1126,7 @@
     if (j.eng !== '非法') return '';
     const row = r => `<div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;
         border-left:2px solid ${r.ok ? '#2fd06e' : '#ffb020'};padding-left:8px">
-      <span style="width:14px">${r.ok ? '<span style="color:#2fd06e">✓</span>' : '<span style="color:#ffb020">✕</span>'}</span>
+      <span style="width:14px">${r.ok ? '<span style="color:#2fd06e">' + U.icon('check') + '</span>' : '<span style="color:#ffb020">' + U.icon('cross') + '</span>'}</span>
       <div style="flex:1"><div>${r.n}</div><div style="color:var(--txt-3)">${r.why}</div></div></div>`;
     const basis = j.reqs.filter(r => r.g === '定性依据'), qual = j.reqs.filter(r => r.g === '质量门槛');
     return U.sect(`「非法」结论依据校验 <span class="tag ${j.reqMiss.length ? 't-amber' : 't-green'}">${j.reqMiss.length ? '缺 ' + j.reqMiss.length + ' 项' : '成立'}</span>`,
@@ -1142,7 +1142,8 @@
           border-left:2px solid ${j.aggravating.hit ? '#ff8b3d' : 'var(--line)'};padding-left:8px">
         <span style="width:14px">${j.aggravating.hit ? '<span style="color:#ff8b3d">▲</span>' : '<span style="color:var(--txt-3)">—</span>'}</span>
         <div style="flex:1"><div>C02 严重违规</div>
-          <div style="color:var(--txt-3)">${j.aggravating.why}</div></div></div>`);
+          <div style="color:var(--txt-3)">${j.aggravating.why}</div></div></div>`,
+      { collapsible: true, open: false, icon: 'shield' });
   }
 
   /* C03 五因子加权明细 */
@@ -1166,7 +1167,7 @@
         </tr>`).join('')}
         <tr><td colspan="3" style="text-align:right;color:var(--txt-2)">加权风险合计</td>
           <td style="text-align:right" class="mono"><b>${j.score}</b></td></tr>
-      </tbody></table>`);
+        </tbody></table>`, { collapsible: true, open: false, icon: 'chart' });
   }
 
   function reviewSect(t) {
@@ -1182,7 +1183,7 @@
           ${r.from === r.to ? '<span style="color:var(--txt-3);font-size:11.5px">（判定结果未变更）</span>' : ''}</div>
         <div style="color:var(--txt-3)">操作者：${esc(r.operator)}（${esc(r.account)} · ${esc(r.role)}）</div>
         <div style="color:var(--txt-2)">理由：${esc(r.reason)}</div>
-      </div>`).join('')}`);
+      </div>`).join('')}`, { collapsible: true, open: false, icon: 'archive' });
   }
 
   function legacyDetail() {
@@ -1194,7 +1195,7 @@
         : engineDegraded(t) ? ' <span class="tag t-amber">证据降级</span>' : '');
     const j = judge(t);
     const manual = manualRevised(t), autoDeg = !manual && engineDegraded(t);
-    const ic = s => s === 'pass' ? '<span style="color:#2fd06e">✓</span>' : s === 'warn' ? '<span style="color:#ffb020">!</span>' : '<span style="color:#ff4d5e">✕</span>';
+    const ic = s => s === 'pass' ? '<span style="color:#2fd06e">' + U.icon('check') + '</span>' : s === 'warn' ? '<span style="color:#ffb020">!</span>' : '<span style="color:#ff4d5e">' + U.icon('cross') + '</span>';
     /* 结论必须在最前面。原来第一屏是 11 个字段的「目标信息」，
        「为什么判成非法」要滚过四屏才看得到 —— 业务人员读这一页是来看结论的，
        字段是给复核用的，顺序反了。下面的技术区块一个都没删，只是排到结论后面。 */
@@ -1255,7 +1256,7 @@
         ${j.gated && t.legal === '非法' ? (function () {
         const c = M.cases.find(x => x.targetId === t.id);
         return `<div class="warnbox" style="margin-top:10px;border-color:rgba(255,77,94,.5);background:rgba(255,77,94,.10)">
-          ⚠ <b>证据不足</b>：本次「非法」判定的唯一支撑是 C01 身份不匹配，但判定时刻<b>无 uavSN 数据源</b>
+          注意：<b>证据不足</b>：本次「非法」判定的唯一支撑是 C01 身份不匹配，但判定时刻<b>无 uavSN 数据源</b>
           （需协议破解 dcd / RemoteID rid 设备上报）。身份匹配只能依据时间窗 + 空间范围，
           <b>不足以定性为非法</b>；按 §10.4「结论一律向待确认收敛」应判「待确认」。
           ${j.reqMiss.length ? `<div style="margin-top:6px">表10-4 结论依据缺 ${j.reqMiss.length} 项：${j.reqMiss.map(r => r.n).join('、')}</div>` : ''}
@@ -1283,11 +1284,19 @@
     const manual = manualRevised(t);
     const autoDeg = !manual && engineDegraded(t);
     const ic = s => s === 'pass'
-      ? '<span style="color:#2fd06e">✓</span>'
-      : s === 'warn' ? '<span style="color:#ffb020">!</span>' : '<span style="color:#ff4d5e">✕</span>';
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <b class="mono" style="font-size:14px">${t.id}</b>
-      </div>
+      ? '<span style="color:#2fd06e">' + U.icon('check') + '</span>'
+      : s === 'warn' ? '<span style="color:#ffb020">!</span>' : '<span style="color:#ff4d5e">' + U.icon('cross') + '</span>';
+    return `${U.detailHero({
+      icon: 'scale', subtitle: '合法性研判目标', title: t.subtype || t.type, id: t.id,
+      tags: [U.legal(t.legal), U.risk(t.risk), manual ? U.tag('人工改判', 't-purple') : ''],
+      meta: [['区域', t.district], ['发现', t.time.slice(11)]]
+    })}
+      ${U.metricStrip([
+        { label: '合法性结论', value: t.legal, tone: t.legal === '合法' ? 'good' : t.legal === '非法' ? 'bad' : 'warn', icon: 'scale' },
+        { label: '风险等级', value: t.risk, tone: /高/.test(t.risk) ? 'bad' : /中/.test(t.risk) ? 'warn' : 'info', icon: 'alert' },
+        { label: '来源置信', value: U.confPct(t.source_confidence), tone: 'good', icon: 'radar' },
+        { label: '判定方式', value: manual ? '人工改判' : autoDeg ? '自动收敛' : '规则引擎', icon: 'settings' }
+      ], { compact: true })}
       ${U.verdictHtml(t)}
       <div style="font-size:13.5px;color:var(--txt-2);margin:14px 0 9px">判定依据</div>
       ${U.basisHtml(t)}
@@ -1300,7 +1309,7 @@
         ['海拔高度', t.alt + ' m'],
         ['速度', t.speed + ' m/s'],
         ['数据来源', t.source + '（置信度 ' + U.confPct(t.source_confidence) + '）']
-      ]))}
+      ], { surface: true, density: 'compact' }), { icon: 'plane' })}
       ${U.sect('规则判定过程' + (manual ? ' <span class="tag t-purple">当前结果已人工改判</span>'
         : autoDeg ? ' <span class="tag t-amber">当前结果已自动收敛</span>' : ''), `
         <div style="display:flex;flex-direction:column;gap:7px">
@@ -1310,17 +1319,16 @@
             <div style="flex:1"><div><b>${i.r.id}</b> ${i.r.n} ${i.badge || ''}</div>
               <div style="color:var(--txt-3)">${i.msg}</div></div>
           </div>`).join('')}
-        </div>`)}
+        </div>`, { icon: 'settings' })}
       ${spaceSect(t, j)}
       ${reqSect(t, j)}
+      ${factorSect(t, j)}
       ${reviewSect(t)}
-      <div style="margin-top:12px">
-        ${t.legal === '待确认'
-          ? '<button class="btn pri" style="width:100%;height:38px;justify-content:center" data-lg="confirm">人工确认</button>'
-          : ['合法', '非法'].includes(t.legal)
-            ? '<button class="btn warn" style="width:100%;height:38px;justify-content:center" data-lg="revise">人工改判</button>'
-            : ''}
-      </div>`;
+      ${t.legal === '待确认'
+        ? U.detailActions('<button class="btn pri" style="width:100%;height:38px;justify-content:center" data-lg="confirm">人工确认</button>')
+        : ['合法', '非法'].includes(t.legal)
+          ? U.detailActions('<button class="btn warn" style="width:100%;height:38px;justify-content:center" data-lg="revise">人工改判</button>')
+          : ''}`;
   }
 
   function drawRing() {
@@ -1396,7 +1404,7 @@
         const d = enumDrift();
         return (d.stale.length || d.missing.length)
           ? `<div class="warnbox" style="border-color:rgba(255,77,94,.5);background:rgba(255,77,94,.10)">
-              ⚠ <b>枚举漂移</b>：本页的违规原因常量与 <span class="mono">MOCK.VIOLATIONS</span> 不一致，判定结果可能失真。
+              注意：<b>枚举漂移</b>：本页的违规原因常量与 <span class="mono">MOCK.VIOLATIONS</span> 不一致，判定结果可能失真。
               ${d.stale.length ? `<br>本页已失效的键：<span class="mono">${d.stale.join('、')}</span>` : ''}
               ${d.missing.length ? `<br>数据层新增、本页严重度表未覆盖：<span class="mono">${d.missing.join('、')}</span>（严重度按 0 计）` : ''}
             </div>` : '';
@@ -1404,7 +1412,7 @@
       ${(function () {
         const d = enumDrift();
         return d.truncated
-          ? `<div class="warnbox">⚠ <b>数据层重新出现内部违规副本</b>：<b>${d.truncated}</b> 个目标带有
+          ? `<div class="warnbox">注意：<b>数据层重新出现内部违规副本</b>：<b>${d.truncated}</b> 个目标带有
               <span class="mono">violations</span> 字段${d.truncatedSample ? `（样例 <span class="mono">${d.truncatedSample.id}</span>）` : ''}。
               Schema 契约字段是 <span class="mono">violation_reasons</span>，一旦两者并存就会重现「页面读内部字段显示正确、
               正式 Adapter 读契约字段拿到截断值」的问题。请收敛回单一字段。</div>` : '';

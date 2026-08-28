@@ -7,7 +7,7 @@
  * （本轮就发生过：边界对齐后按旧值仍报 35,570 张缺失）。
  * ========================================================================== */
 const fs = require('fs'), path = require('path');
-const ROOT = path.join(__dirname, '..', 'dongying-demo');   // tools 已移出服务根，故多一层
+const ROOT = path.join(__dirname, '..');
 const TILES = path.join(ROOT, 'assets', 'tiles', 'DongyingTiles', 'AMap', 'roadmap');
 
 /* 从 map.js 解析 B —— 单一事实来源 */

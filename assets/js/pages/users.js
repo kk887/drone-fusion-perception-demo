@@ -52,14 +52,19 @@
     const u = sel;
     if (!u) return '<div class="empty">请选择用户</div>';
     const myAudit = M.auditLogs.filter(a => a.user === u.name).slice(0, 5);
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3d8bff,#22d3ee);
-          display:flex;align-items:center;justify-content:center;font-size:17px;color:#04091c;font-weight:700">${u.name[0]}</div>
-        <div><b style="font-size:14px">${u.name}</b><div style="font-size:11.5px;color:var(--txt-3)">@${u.account}</div></div>
-        <span style="margin-left:auto">${U.tag(u.roleName, u.role === 'R2' ? 't-orange' : 't-blue')}</span></div>
+    return `${U.detailHero({
+      icon: 'user', variant: 'compact', subtitle: '用户与权限', title: u.name, id: '@' + u.account,
+      tags: [U.tag(u.roleName, u.role === 'R2' ? 't-orange' : 't-blue'), U.tag(u.status, u.status === '正常' ? 't-green' : 't-gray')],
+      meta: [['单位', u.org]]
+    })}
+      ${U.metricStrip([
+        { label: '账号状态', value: u.status, tone: u.status === '正常' ? 'good' : 'warn', icon: 'user' },
+        { label: '双因子认证', value: u.mfa, tone: u.mfa === '已开启' ? 'good' : 'warn', icon: 'shield' },
+        { label: '在线状态', value: u.online ? '在线' : '离线', tone: u.online ? 'good' : 'info', icon: 'mon' }
+      ], { compact: true })}
       ${U.kv([['所属单位', u.org], ['联系电话', u.phone], ['账号状态', U.tag(u.status, u.status === '正常' ? 't-green' : 't-gray')],
       ['双因子认证', u.mfa], ['创建时间', u.createdAt], ['最后登录', u.lastLogin], ['登录 IP', `<span class="mono">${u.lastIp}</span>`],
-      ['反制/干扰授权', ['R1', 'R2'].includes(u.role) ? '<span class="tag t-red">可授权（§6.3 双人确认）</span>' : '<span class="tag t-gray">无权限</span>']])}
+      ['反制/干扰授权', ['R1', 'R2'].includes(u.role) ? '<span class="tag t-red">可授权（§6.3 双人确认）</span>' : '<span class="tag t-gray">无权限</span>']], { surface: true, density: 'compact' })}
       ${U.sect('近期操作（' + myAudit.length + '）', myAudit.length
         ? myAudit.map(a => `<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:4px 0;border-bottom:1px solid rgba(64,158,255,.08)">
             <span style="color:var(--txt-2)">${a.action}</span><span class="mono" style="color:var(--txt-3)">${a.time.slice(5, 16)}</span></div>`).join('')
@@ -106,10 +111,10 @@
 
   function tools() {
     if (tab === 'user') return `<input class="ip" id="usKw" style="width:180px" placeholder="搜索姓名 / 账号 / 单位" value="${kw}">
-      <button class="btn pri" id="usAdd">＋ 新增用户</button>`;
+      <button class="btn pri" id="usAdd">${U.icon('plus')} 新增用户</button>`;
     if (tab === 'audit') return `${U.select('am', ['全部模块', '处置处罚管理', '设备接入调测', '系统登录'])}
-      <button class="btn" id="usExp">⭳ 导出审计日志</button>`;
-    return `<button class="btn" id="usSave">💾 保存权限变更（需双人复核）</button>`;
+      <button class="btn" id="usExp">${U.icon('download')} 导出审计日志</button>`;
+    return `<button class="btn" id="usSave">${U.icon('save')} 保存权限变更（需双人复核）</button>`;
   }
 
 

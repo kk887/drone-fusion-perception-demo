@@ -75,6 +75,15 @@
     return r;
   })();
   g.ROUTES = ROUTES;
+  const PAGE_THEME = {
+    overview: 'overview',
+    situation: 'sensing', monitor: 'sensing',
+    flights: 'flight', legality: 'flight', risk: 'flight', airspace: 'flight',
+    alarms: 'incident', punish: 'incident',
+    stats: 'analytics', evidence: 'analytics',
+    devices: 'operations', commission: 'operations', apis: 'operations',
+    users: 'system', archive: 'system'
+  };
   const pageTitle = k => (ROUTES[k] || { t: k }).t;
 
   /* ---------- 导航渲染 ---------- */
@@ -144,10 +153,12 @@
   let current = null;
   function route() {
     const k = curKey();
+    document.body.dataset.page = k;
+    document.body.dataset.theme = PAGE_THEME[k] || 'overview';
     const known = !!ROUTES[k];
     const page = g.PAGES[k] || (known ? {
       render: () => `<div class="panel" style="margin-top:12px"><div class="pb" style="padding:28px">
-        <div style="font-size:15px;color:#ffb083;margin-bottom:10px">⚠ 页面模块未加载：<span class="mono">${k}</span></div>
+        <div class="inline-icon" style="font-size:15px;color:#ffb083;margin-bottom:10px">${U.icon('warning')} 页面模块未加载：<span class="mono">${k}</span></div>
         <div style="font-size:13px;color:var(--txt-2);line-height:1.8">
           导航中存在该页面，但 <span class="mono">window.PAGES.${k}</span> 未定义。<br>
           常见原因：<span class="mono">index.html</span> 缺少对应的 script 标签，或该模块在加载时抛出了异常
@@ -172,7 +183,6 @@
     if (page.mount) page.mount(view);
     renderNav(); renderCrumb();
     document.title = pageTitle(k) + ' · 无人机融合感知平台';
-    if (g.DEMO) g.DEMO.onRoute(k);
   }
 
   g.APP = {
@@ -187,32 +197,40 @@
     /* 平台当前时刻只有一个来源：M.now()。 */
     const tick = () => {
       const s = M.nowStr();
-      document.getElementById('clk').innerHTML = `🕐 ${s}`;
+      document.getElementById('clk').innerHTML = `${U.icon('clock')} ${s}`;
       const f = document.getElementById('ftm'); if (f) f.textContent = s;
     };
     tick();
     setInterval(tick, 1000);
     document.getElementById('wea').innerHTML =
-      `${M.CONF.city} ☁ ${M.CONF.weather.tempLo}℃ ~ ${M.CONF.weather.tempHi}℃ ${M.CONF.weather.text}`;
+      `${M.CONF.city} ${U.icon('cloud')} ${M.CONF.weather.tempLo}℃ ~ ${M.CONF.weather.tempHi}℃ ${M.CONF.weather.text}`;
     document.getElementById('bellN').textContent = M.todayStats.pendingAlarm + M.todayStats.disposing;
     document.getElementById('bell').onclick = () => { location.hash = '#/alarms'; };
 
     const menu = document.createElement('div');
     menu.className = 'usermenu';
     menu.innerHTML = `
-      <div class="mi" data-um="me">👤 个人信息</div>
-      <div class="mi" data-um="ops">⚙ 运维管理</div>
-      <div class="mi" data-um="users">🛡 用户与权限</div>
-      <div class="mi" data-um="carousel">▶ 大屏轮播</div>
+      <div class="mi" data-um="me">${U.icon('user')} 个人信息</div>
+      <div class="mi" data-um="ops">${U.icon('settings')} 运维管理</div>
+      <div class="mi" data-um="users">${U.icon('shield')} 用户与权限</div>
+      <div class="mi" data-um="carousel">${U.icon('play')} 大屏轮播</div>
       <div class="sep"></div>
-      <div class="mi" data-um="logout">⎋ 退出登录</div>`;
+      <div class="mi" data-um="logout">${U.icon('logout')} 退出登录</div>`;
     document.body.appendChild(menu);
     const userBtn = document.querySelector('.hdr .user');
-    userBtn.onclick = e => { e.stopPropagation(); menu.classList.toggle('open'); };
-    document.addEventListener('click', () => menu.classList.remove('open'));
+    userBtn.onclick = e => {
+      e.stopPropagation();
+      const open = menu.classList.toggle('open');
+      userBtn.setAttribute('aria-expanded', String(open));
+    };
+    document.addEventListener('click', () => {
+      menu.classList.remove('open');
+      userBtn.setAttribute('aria-expanded', 'false');
+    });
     menu.addEventListener('click', e => {
       const mi = e.target.closest('[data-um]'); if (!mi) return;
       menu.classList.remove('open');
+      userBtn.setAttribute('aria-expanded', 'false');
       const k = mi.dataset.um;
       if (k === 'users') location.hash = '#/users';
       else if (k === 'carousel') carouselDlg();
@@ -229,9 +247,11 @@
   /* ---------- 大屏模式 ---------- */
   function bindBigScreen() {
     const btn = document.getElementById('btnBig');
+    const label = on => `${U.icon('fullscreen')} ${on ? '退出大屏' : '大屏'}`;
+    btn.innerHTML = label(false);
     btn.onclick = () => {
       const on = document.body.classList.toggle('bigscreen');
-      btn.textContent = on ? '⛶ 退出大屏' : '⛶ 大屏';
+      btn.innerHTML = label(on);
       if (on && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => { });
       } else if (!on && document.fullscreenElement && document.exitFullscreen) {
@@ -243,7 +263,7 @@
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && document.body.classList.contains('bigscreen')) {
         document.body.classList.remove('bigscreen');
-        btn.textContent = '⛶ 大屏';
+        btn.innerHTML = label(false);
         window.dispatchEvent(new Event('resize'));
       }
     });
@@ -265,7 +285,7 @@
     let left = sec;
     const paint = () => {
       chip.innerHTML = `<span>轮播中 <b>${i + 1}/${pages.length}</b> · ${pageTitle(pages[i])}</span>
-        <span style="color:var(--txt-3)">${left}s 后切换</span><span class="x" title="停止轮播">✕</span>`;
+        <span style="color:var(--txt-3)">${left}s 后切换</span><button class="icon-btn x" type="button" title="停止轮播" aria-label="停止轮播">${U.icon('close')}</button>`;
       chip.querySelector('.x').onclick = () => { stopCarousel(); UI.toast('已停止轮播'); };
       bar.style.width = ((sec - left) / sec * 100).toFixed(1) + '%';
     };
@@ -309,7 +329,6 @@
     window.addEventListener('hashchange', route);
     if (!location.hash) location.hash = '#/overview';
     route();
-    if (g.DEMO) g.DEMO.bind();
   }
   document.addEventListener('DOMContentLoaded', boot);
 })(window);

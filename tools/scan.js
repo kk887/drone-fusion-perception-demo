@@ -10,7 +10,7 @@
  * ========================================================================== */
 const fs = require('fs'), path = require('path');
 
-const ROOT = path.join(__dirname, '..', 'dongying-demo');   // tools 已移出服务根，故多一层
+const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'assets', 'js');
 
 /* 收集待扫描文件：assets/js/**\/*.js，排除 vendor 与本脚本 */

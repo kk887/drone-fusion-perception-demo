@@ -2,13 +2,9 @@
    同一局域网内其他人可用启动时打印的 http://<本机IP>:8899 访问。
    （Demo 也可直接双击 index.html 打开，无需本服务） */
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
-/* ROOT 显式指向 dongying-demo，而不是 __dirname。
-   原来 serve.js 放在 dongying-demo/ 内、ROOT = __dirname，于是**服务根里的每一个文件都可下载**——
-   包括 serve.js 自身、tools/ 全部脚本、以及写满内部缺陷史与判据的 README。
-   公网隧道一开，这些全在外面。现在 serve.js 与 tools/ 都在服务根之外，
-   服务根只剩 index.html 与 assets/。
-   纪律：**往 dongying-demo/ 放任何文件之前，先问"这个能不能被公网下载"。** */
-const ROOT = path.join(__dirname, 'dongying-demo'), PORT = 8899, HOST = '0.0.0.0';   // 显式监听全部网卡，否则局域网访问不到
+/* 当前仓库根即静态站点根。服务端只放行 index.html 与 assets/，
+   避免 README、tools、serve.js 等开发文件被局域网访问。 */
+const ROOT = __dirname, PORT = 8899, HOST = '0.0.0.0';
 const T = {
   '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
@@ -18,8 +14,9 @@ const T = {
 };
 http.createServer((q, s) => {
   let p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
-  const f = path.join(ROOT, p);
-  if (!f.startsWith(ROOT)) { s.writeHead(403); return s.end('forbidden'); }
+  if (p !== '/index.html' && !p.startsWith('/assets/')) { s.writeHead(404); return s.end('404 ' + p); }
+  const f = path.resolve(ROOT, '.' + p);
+  if (!f.startsWith(ROOT + path.sep)) { s.writeHead(403); return s.end('forbidden'); }
   fs.readFile(f, (e, d) => {
     if (e) { s.writeHead(404); return s.end('404 ' + p); }
     s.writeHead(200, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' });

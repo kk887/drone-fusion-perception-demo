@@ -119,7 +119,7 @@
                同步是接口的事，不是人点出来的。
                注意计划列表「来源」列里的「上级管控平台」标识**保留**：那是数据来源事实，
                与这个按钮无关，删按钮不该顺手把事实一起删掉。 */''}
-          <span style="flex:1"></span><button class="btn" id="flExp">⭳ 导出</button>
+          <span style="flex:1"></span><button class="btn" id="flExp">${U.icon('download')} 导出</button>
         </div>
         <div id="flList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
@@ -130,7 +130,7 @@
            右列用 flex 而不是固定 620px：固定宽度下**视口越宽表格越占便宜** ——
            实测 1440 时地图/表格 = 51%，到 1600 反而掉到 41%，因为表格跟着视口长、地图不长。
            主次比例必须在各档宽度下都成立，否则它只是在某一个分辨率上碰巧对。 */''}
-      <div class="col" style="flex:1;min-width:560px">
+      <div class="col" style="flex:1;min-width:560px;display:grid;grid-template-rows:minmax(290px,1.35fr) minmax(240px,1fr);gap:var(--gap)">
         ${U.panel({
       /* 用户要的是"看这个计划的航线里有没有鸟群啊什么的" —— 不是把空间安全模块搬过来，
          而是在本页用地图回答"这条航线周边安不安全"。 */
@@ -147,7 +147,7 @@
          仅为表格的 42% —— 高度没跟上宽度。2.6 让画布约 606×304 = 184k（表格的 53%）。
          **没有一路推到"地图比表格大"**：那要求画布高 340+，会把计划详情压到 73px 可视高，
          而详情是选中之后要读的东西。主次要立住，但不能把第三块挤没。 */
-      title: '航线周边态势', style: 'flex:2.6;min-height:0', nopad: true,
+      title: '航线周边态势', style: 'min-height:0', nopad: true,
       bodyStyle: 'padding:6px',
       /* 主体必须自报身份：原来标题固定、看不出在看哪条航线；那两个数（穿越空域/近7天异物）
          原本是 11px 灰字挤在标题右边 —— 在 250px 小图里当注脚合理，放大成主体后不合理。
@@ -160,7 +160,7 @@
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>`
     })}
         ${U.panel({
-      title: '计划详情', style: 'flex:1;min-height:0', nopad: true, extra: `<span id="flSt"></span>`,
+      title: '计划详情', style: 'min-height:0', nopad: true, extra: `<span id="flSt"></span>`,
       body: `<div id="flDetail" style="flex:1;overflow:auto;padding:12px"></div>`
     })}
       </div>
@@ -211,7 +211,17 @@
     if (!p) return '<div class="empty">请选择计划</div>';
     document.getElementById('flSt').innerHTML = U.tag(p.status);
     const linked = M.todayTargets.filter(t => t.district === p.region && t.legal === '合法').slice(0, 2);
-    return `<div style="margin-bottom:10px"><b class="mono" style="font-size:14px">${p.id}</b></div>
+    return `${U.detailHero({
+      icon: 'plan', subtitle: '飞行计划', title: p.purpose || p.route, id: p.id,
+      tags: [U.tag(p.status), U.tag(p.matched, p.matched === '已匹配' ? 't-green' : 't-amber')],
+      meta: [['区域', p.region], ['时段', p.start.slice(11) + '–' + p.end.slice(11)]]
+    })}
+      ${U.metricStrip([
+        { label: '执行状态', value: p.status, tone: p.status === '已完成' ? 'good' : 'info', icon: 'play' },
+        { label: '计划时长', value: p.durMin, unit: 'min', icon: 'clock' },
+        { label: '最大高度', value: p.maxAlt, unit: 'm', icon: 'trend' },
+        { label: '目标匹配', value: p.matched, tone: p.matched === '已匹配' ? 'good' : 'warn', icon: 'link' }
+      ], { compact: true })}
       ${U.sect('计划信息', U.kv([
       ['无人机ID', `<span class="mono">${p.droneId}</span>`], ['机型', p.model],
       ['所属单位', p.partner], ['飞手', p.pilot + '（执照 ' + p.pilotLic + '）'],
@@ -219,8 +229,8 @@
       ['起飞点', `<span class="mono">${p.takeoff.lon}°E, ${p.takeoff.lat}°N</span>`],
       ['计划时段', p.start + ' ~ ' + p.end], ['最大高度', p.maxAlt + ' m'],
       ['航线', p.route], ['计划来源', p.source]
-    ]))}
-      ${U.sect('审批信息', U.kv([['审批单位', p.approver], ['审批时间', p.approvedAt], ['审批结论', U.tag('已批准', 't-green')]]))}
+    ], { surface: true, density: 'compact' }), { icon: 'plan' })}
+      ${U.sect('审批信息', U.kv([['审批单位', p.approver], ['审批时间', p.approvedAt], ['审批结论', U.tag('已批准', 't-green')]], { surface: true, density: 'compact' }), { icon: 'check' })}
       ${(function () {
         if (p.matched === '—') return U.sect('计划与实际对照（F0305 · C01）', '<div class="empty" style="padding:10px">计划尚未开始执行</div>');
         if (p.matched !== '已匹配') return U.sect('计划与实际对照（F0305 · C01）',
@@ -233,7 +243,7 @@
            而这一格正是给监管看"有没有偏离报备"的。如实说没有，并指出矛盾在哪。 */
         if (!d) return U.sect('计划与实际对照（F0305 · C01）',
           `<div class="warnbox" style="border-color:rgba(255,176,32,.45);background:rgba(255,176,32,.08);line-height:1.85">
-            ⚠ 该计划标记为<b>已匹配</b>，但<b>没有对照数据</b>（<span class="mono">deviation</span> 为空）。<br>
+            注意：该计划标记为<b>已匹配</b>，但<b>没有对照数据</b>（<span class="mono">deviation</span> 为空）。<br>
             <span style="color:var(--txt-3)">"已匹配"意味着找到了对应的感知目标，那就应当能算出偏航/时差/超高三项。
             两者同时成立是数据层的不一致，已提请核查 —— 此处不显示"与报备一致"，因为那是一个我们并没有做出的判断。</span></div>`);
         const row = (k, txt) => {
@@ -258,7 +268,7 @@
               /* 结论只对「判得了的那几项」负责，不可判定项必须说出去 ——
                  否则「与报备一致」会被读成"三项都比过了" */
               + (v.undet.length ? `<div style="font-size:11px;color:#ffd07a;margin-top:3px;line-height:1.7">
-                  ⚠ 本次对照有 ${v.undet.length} 项不可判定（${v.undet.map(i => DEV_TH[i.k].name).join('、')}），
+                  注意：本次对照有 ${v.undet.length} 项不可判定（${v.undet.map(i => DEV_TH[i.k].name).join('、')}），
                   未计入上述结论 —— 不可判定不等于合规</div>` : '')]
           ]) + `<div style="font-size:11px;color:var(--txt-3);margin-top:6px">
             判定阈值：偏航 ≤${DEV_TH.lateral.ok}m 正常 / ≤${DEV_TH.lateral.warn}m 提示；
@@ -270,9 +280,7 @@
            「合法性判定 →」只在「待执行」时出现 —— 判定是起飞前的事。
            其余状态**不显示**而不是置灰：没有那一步就不该有那个钮，
            与"已完成计划隐藏风险预检"同一条。 */''}
-      ${p.status === '待执行' ? `<div style="display:flex;gap:8px">
-        <button class="btn" style="flex:1;justify-content:center" data-fl="legal">合法性判定 →</button>
-      </div>` : ''}`;
+      ${p.status === '待执行' ? U.detailActions(`<button class="btn pri" style="flex:1;justify-content:center" data-fl="legal">合法性判定 →</button>`) : ''}`;
   }
 
   /* ===== 本航线风险（用户原话：看飞行活动的航线上有没有危险然后实施操作）=====
@@ -298,7 +306,7 @@
     const inCor = list.filter(e => e._d <= halfKm);
     const near = list.filter(e => e._d > halfKm);
     if (!list.length) return U.sect(`本航线风险（近 ${NEAR_DAYS} 天）`,
-      `<div style="color:#79e5a5;font-size:12.5px">✓ 走廊内与 ${RISK_NEAR_KM} km 邻近范围内无风险事件</div>`);
+      `<div class="inline-icon" style="color:#79e5a5;font-size:12.5px">${U.icon('check')} 走廊内与 ${RISK_NEAR_KM} km 邻近范围内无风险事件</div>`);
     const row = (e, lv) => {
       /* 本页只暴露「通知上级」一个动作（用户裁定）。
          核验、排除、归档属于风险处置模块 —— 在一条飞行计划的上下文里，

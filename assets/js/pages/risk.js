@@ -385,8 +385,12 @@
            状态标签本身已经说明处于哪一步，再摆一个灰按钮是重复且更容易点错。
            注意：**列表行内的核验/转处置/归档按钮不在本次范围**，那是用户此前明确要的工作流。 */
         const can = (M.riskNext ? M.riskNext(r.status) : []).some(t => t.to === '已通知');
-        if (!can) return '';
-        return U.detailActions(`<button class="btn pri" style="width:100%;justify-content:center" data-rkto="已通知">通知上级</button>`);
+        if (can) return U.detailActions(`<button class="btn pri" style="width:100%;justify-content:center" data-rkto="已通知">通知上级</button>`);
+        /* 用户增补（2026-08-27）：「待核验」也要在详情里给通报入口。
+           一键走两步**合法**流转：核验通过（→待通知）后弹通报窗（→已通知），
+           每步各留一条处置记录；通报窗被取消则停在「待通知」，核验不回退。 */
+        if (r.status === '待核验') return U.detailActions(`<button class="btn pri" style="width:100%;justify-content:center" data-rkvn="1">核验通过并通报上级</button>`);
+        return '';
       })()}`;
   }
 
@@ -536,6 +540,18 @@
       advanceRisk(r, to, REC || { act: '状态流转至' + to, result: '—', evidence: '—' }, repaintAll);
     });
 
+
+    /* 待核验详情的「核验通过并通报上级」：两次 advanceRisk 都走同一写入口，各自校验合法性 */
+    U.on(view, '[data-rkvn]', 'click', () => {
+      const r = st.sel;
+      if (!r || r.status !== '待核验') return;
+      if (!advanceRisk(r, '待通知', {
+        act: '人工核验通过', result: '确认为真实风险，转通报上级', evidence: '核验单 + 现场影像'
+      }, repaintAll)) return;
+      noticeModal(r, () => advanceRisk(r, '已通知', {
+        act: '通知上级', result: '通报已发出，等待回执', evidence: '通报单 + 回执记录'
+      }, repaintAll));
+    });
 
     U.on(view, '[data-rk]', 'click', (e, el) => {
       if (el.disabled) return;

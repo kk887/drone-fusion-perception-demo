@@ -418,18 +418,24 @@
 
     /* 目标轨迹 */
     if (this.layers.track) {
+      /* 选中态可见性（用户实测"不明显"后强化）：有选中目标时其余目标整体压暗，
+         对比是最强的可见性手段；选中者叠加 强脉冲 + 稳定内圈 + 四角定位括号。 */
+      const selOnMap = !!this.sel && (this.data.targets || []).some(x => x.id === this.sel);
       (this.data.targets || []).forEach((t, ti) => {
+        const isSel = this.sel === t.id;
+        const dim = selOnMap && !isSel;
+        if (dim) { c.save(); c.globalAlpha = .35; }
         // §4.2：非无人机目标不做合法性判定，'不适用' 单列中性色，不得与「合法」同色
         const col = t.legal === '非法' ? '#ff4d5e' : t.legal === '异常' ? '#ff8b3d'
           : t.legal === '待确认' ? '#ffb020' : t.legal === '不适用' ? '#8ca0be' : '#2fd06e';
         /* AOA 目标只有方位角，没有经纬度（协议 v8.6）—— 画成从设备射出的方位线。
            当点画等于凭空给了一个平台并不知道的位置。 */
-        if (t.posValid === false) { this._drawBearing(c, t, P, col); return; }
+        if (t.posValid === false) { this._drawBearing(c, t, P, col); if (dim) c.restore(); return; }
         const tr = t.track || [];
         if (tr.length > 1) {
           /* F0202:按点型分段绘制 —— 实测=动画虚线 / 弥合=橙色宽隙虚线(A03) / 预测=青色点线(A04) */
           const STYLE = {
-            meas: { dash: [6, 4], col: col + (t.tracked ? 'ee' : '99'), w: t.tracked ? 2 : 1.3, anim: true },
+            meas: { dash: [6, 4], col: col + ((t.tracked || isSel) ? 'ee' : '99'), w: (t.tracked || isSel) ? 2 : 1.3, anim: true },
             bridge: { dash: [3, 6], col: '#ff8b3d', w: 2, anim: false },
             pred: { dash: [2, 5], col: '#22d3ee', w: 1.6, anim: false }
           };
@@ -460,7 +466,23 @@
         const q = P(last.lon, last.lat);
         // 目标图标（旋翼）
         c.save(); c.translate(q[0], q[1]);
-        if (t.tracked || this.sel === t.id) {
+        if (isSel) {
+          /* 选中标记走交互色系（合法目标青色、其余红色），与合法性色 col 分层不混用 */
+          const mk = t.legal === '合法' ? '#22d3ee' : '#ff4d5e';
+          const ph = (this.t % 50) / 50;
+          c.beginPath(); c.arc(0, 0, 12 + ph * 14, 0, 7);   // 外圈强脉冲：粗线、透明度不落到 0
+          c.strokeStyle = mk + Math.round(((1 - ph) * .8 + .2) * 255).toString(16).padStart(2, '0');
+          c.lineWidth = 3; c.stroke();
+          c.beginPath(); c.arc(0, 0, 9, 0, 7);              // 内圈稳定锚：脉冲最淡时仍有落点
+          c.strokeStyle = mk; c.lineWidth = 2; c.stroke();
+          const B = 15, L = 6;                              // 四角定位括号（雷达风格）
+          c.strokeStyle = mk; c.lineWidth = 2;
+          [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {
+            c.beginPath();
+            c.moveTo(sx * B, sy * (B - L)); c.lineTo(sx * B, sy * B); c.lineTo(sx * (B - L), sy * B);
+            c.stroke();
+          });
+        } else if (t.tracked) {
           const r = 10 + (this.t % 50) / 50 * 12;
           c.beginPath(); c.arc(0, 0, r, 0, 7);
           c.strokeStyle = `rgba(255,77,94,${(1 - (this.t % 50) / 50) * .8})`; c.lineWidth = 1.5; c.stroke();
@@ -474,11 +496,19 @@
         }
         c.restore();
         c.beginPath(); c.arc(q[0], q[1], 2.4, 0, 7); c.fillStyle = col; c.fill();
-        if (this.opt.showTargetLabels !== false && (t.tracked || this.sel === t.id || (this.data.targets || []).length <= 8)) {
+        if (isSel) {
+          const mk = t.legal === '合法' ? '#22d3ee' : '#ff4d5e';
+          c.font = '12px Menlo'; c.textAlign = 'left';
+          const tx = t.id.slice(-9), tw = c.measureText(tx).width + 10;
+          c.fillStyle = 'rgba(4,10,26,.92)'; c.fillRect(q[0] + 16, q[1] - 22, tw, 17);
+          c.strokeStyle = mk; c.lineWidth = 1; c.strokeRect(q[0] + 16, q[1] - 22, tw, 17);
+          c.fillStyle = '#fff'; c.fillText(tx, q[0] + 21, q[1] - 9);
+        } else if (this.opt.showTargetLabels !== false && (t.tracked || (this.data.targets || []).length <= 8)) {
           c.font = '10.5px Menlo'; c.textAlign = 'left';
           c.fillStyle = 'rgba(4,10,26,.8)'; c.fillRect(q[0] + 11, q[1] - 16, 62, 12);
           c.fillStyle = col; c.fillText(t.id.slice(-9), q[0] + 13, q[1] - 7);
         }
+        if (dim) c.restore();
         picks.push({
           x: q[0], y: q[1], kind: 'target', data: t,
           tip: `<b style="color:${col}">${t.id}</b><dl class="kv" style="margin-top:6px">

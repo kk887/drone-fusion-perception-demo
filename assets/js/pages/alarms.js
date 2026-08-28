@@ -101,7 +101,8 @@
     <!-- 指标卡占实际高度，主工作区用 flex 接收全部剩余空间，不再依赖视口像素常量。 -->
     <div class="row" style="margin-top:12px;flex:1;min-height:0">
       ${U.panel({
-      title: '告警列表', style: 'flex:1;min-width:0', nopad: true,
+      /* 用户裁定（2026-08-27）：左右按 6:4 分宽（处置处罚、设备管理同口径） */
+      title: '告警列表', style: 'flex:6;min-width:0', nopad: true,
       body: `<div class="toolbar">
           ${U.field('等级', U.select('level', ['全部', '高', '中', '低'], st.level))}
           ${U.field('类别', U.select('kind', ['全部', '飞行违规', '空间安全'], st.kind))}
@@ -112,7 +113,7 @@
         </div>
         <div id="alList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
-      <div class="col" style="width:560px;flex:none">
+      <div class="col" style="flex:4;min-width:0">
         ${U.panel({
       /* 地图高度取 244px 与行高 46% 的较小值：视口偏矮时（1280×800）不至于把下面的详情面板压成一条缝 */
       title: '关联目标定位与轨迹', style: 'height:244px;max-height:50%;flex:none', nopad: true,

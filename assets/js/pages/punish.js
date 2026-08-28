@@ -248,7 +248,8 @@
   function tabCase() {
     return `<div class="row" style="height:100%;min-height:0;padding-bottom:6px">
       ${U.panel({
-      title: '处罚案件管理', style: 'flex:1.5', nopad: true,
+      /* 用户裁定（2026-08-27）：左右按 6:4 分宽（与告警、设备管理同口径） */
+      title: '处罚案件管理', style: 'flex:6;min-width:0', nopad: true,
       body: `<div class="toolbar">
           ${U.field('时间', U.select('days', [{ v: 7, t: '近7天' }, { v: 30, t: '近30天' }], st.days))}
           ${U.field('区域', U.select('region', ['全部区域', ...M.DISTRICTS.map(d => d.name)], st.region))}
@@ -261,7 +262,7 @@
         <div id="pnList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
       ${U.panel({
-      title: '案件详情', style: 'width:560px', nopad: true,
+      title: '案件详情', style: 'flex:4;min-width:0', nopad: true,
       extra: `<span id="pnSt"></span>`,
       body: `<div id="pnDetail" style="flex:1;overflow:auto;padding:12px"></div>`
     })}

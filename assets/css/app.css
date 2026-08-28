@@ -1094,3 +1094,18 @@ body[data-page="stats"] .panel{box-shadow:0 7px 20px rgba(0,0,0,.12);border-colo
   .detail-hero{min-height:84px;padding:12px 13px}.detail-hero-icon{width:40px;height:40px}
   body[data-page="devices"] .col-optional{display:none!important}
 }
+
+/* ---------- 「本航线风险」行：点行在地图上高亮 ----------
+   新增选择器，未改动任何既有规则。 */
+.flrisk-row{padding:6px 4px;border-bottom:1px solid rgba(64,158,255,.08);
+  border-radius:6px;cursor:pointer;transition:background .15s,box-shadow .15s}
+.flrisk-row:hover{background:rgba(64,158,255,.07)}
+.flrisk-row.on{background:rgba(34,211,238,.13);box-shadow:inset 3px 0 0 var(--cyan)}
+
+/* ---------- 实时告警列表：目标已离开实时跟踪窗口的行 ----------
+   新增选择器，未改动任何既有规则。 */
+.stalm .a.hist,.a.hist{opacity:.72}
+.a.hist:hover{opacity:1}
+.hist-tag{display:inline-block;margin-right:6px;padding:0 6px;border-radius:4px;
+  font-size:11px;line-height:18px;color:var(--txt-3);
+  border:1px dashed rgba(140,160,190,.45);background:rgba(140,160,190,.08)}

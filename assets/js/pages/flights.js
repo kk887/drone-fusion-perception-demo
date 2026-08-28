@@ -1,7 +1,8 @@
 /* ===== 11. 飞行活动管理（飞行计划 / 身份 / 合作方） ===== */
 (function (g) {
   const M = MOCK, U = UI;
-  let st = { page: 1, size: 10, status: '全部', partner: '全部', region: '全部', kw: '', sel: null };
+  let st = { page: 1, size: 10, status: '全部', partner: '全部', region: '全部', kw: '', sel: null,
+    hlRisk: null };   // 「本航线风险」列表里当前高亮的那起事件 id —— 与地图上的高亮是同一个来源
 
   /* ---- F0305:计划与实际飞行对照 —— 判定阈值(Demo 缺省值,待业务方确认 C01/C02) ---- */
   const DEV_TH = {
@@ -160,7 +161,9 @@
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>`
     })}
         ${U.panel({
-      title: '计划详情', style: 'min-height:0', nopad: true, extra: `<span id="flSt"></span>`,
+      /* 用户裁定（2026-08-27）：计划详情至少放大三倍（flex 1→3，超过航线周边态势的 2.6）；
+         屏内显示不开时靠 body 的 overflow:auto 下拉看全，不再压缩内容。 */
+      title: '计划详情', style: 'flex:3;min-height:0', nopad: true, extra: `<span id="flSt"></span>`,
       body: `<div id="flDetail" style="flex:1;overflow:auto;padding:12px"></div>`
     })}
       </div>
@@ -316,7 +319,11 @@
          若当前状态根本走不到「已通知」（如已归档），**不显示点不动的按钮**，
          状态标签本身已经说明处于哪一步。 */
       const nx = ((M.riskNext ? M.riskNext(e.status) : []) || []).filter(t => t.to === '已通知');
-      return `<div style="padding:6px 0;border-bottom:1px solid rgba(64,158,255,.08)">
+      /* 整行可点 = 在上方地图上高亮这一起。选中态读 st.hlRisk 而不是靠 DOM 记，
+         否则任何一次 rerender（行内处置推进就会触发）都会把高亮悄悄抹掉，
+         而地图那边还亮着 —— 两处不同源就是这么来的。 */
+      return `<div data-flrisk-hl="${e.id}" class="flrisk-row${st.hlRisk === e.id ? ' on' : ''}"
+        title="点击在上方地图高亮该风险">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
           <span style="font-size:12.5px">${U.tag(lv, lv === '走廊内' ? 't-red' : 't-amber')}
             ${e.type}${e.subtype ? '（' + e.subtype + '）' : ''} ×${e.count}
@@ -421,6 +428,18 @@
       : `<span style="color:#79e5a5">近 ${NEAR_DAYS} 天走廊沿线（半宽+容差+2km 缓冲内）无异物活动记录</span>`;
   }
 
+  /* 高亮一起风险时，如果它落在当前视野外就平移过去；已经看得见就别动 ——
+     每点一下都强行居中，会把用户自己拖好的视角一次次拽走。 */
+  function revealHazard(id) {
+    if (!map || !map._fl) return;
+    const e = (map._fl.hz || []).find(x => x.id === id);
+    if (!e) return;
+    const q = map.px(e.lon, e.lat), pad = 60;
+    if (q[0] >= pad && q[0] <= map.w - pad && q[1] >= pad && q[1] <= map.h - pad) return;
+    map.ox += map.w / 2 - q[0];
+    map.oy += map.h / 2 - q[1];
+  }
+
   function paint() {
     document.getElementById('flList').innerHTML = list();
     document.getElementById('flDetail').innerHTML = detail();
@@ -460,6 +479,19 @@
       // 跳到「全部风险事件」页签并选中该事件，复用既有的 goto/consume 通路
       U.goto('risk', { eventId: el.dataset.flriskGo });
     });
+    /* 点行 = 在地图上高亮这一起风险；再点一次取消。
+       U.on 的多个处理器挂在同一个 root 上，stopPropagation 拦不住兄弟处理器，
+       所以这里显式让位：点在编号或处置按钮上时直接返回，交给它们自己的处理器。 */
+    U.on(view, '[data-flrisk-hl]', 'click', (e, el) => {
+      if (e.target.closest('[data-flrisk-go],[data-flrisk-to]')) return;
+      const id = el.dataset.flriskHl;
+      st.hlRisk = (st.hlRisk === id) ? null : id;
+      /* 只改这几行的 class，不重绘整块 —— 重绘会把列表滚动位置顶回顶部，
+         而这个列表恰恰是要一边往下翻一边点的。地图不用管：draw 每帧都读 st.hlRisk。 */
+      view.querySelectorAll('[data-flrisk-hl]').forEach(n =>
+        n.classList.toggle('on', n.dataset.flriskHl === st.hlRisk));
+      if (st.hlRisk) revealHazard(st.hlRisk);
+    });
     map = new MapView(document.getElementById('flMap'), {
       zoom: 3.2, maxDev: 0, legend: false, layers: { device: false, track: false, alarm: false }
     });
@@ -496,6 +528,15 @@
         const q = this.px(e.lon, e.lat);
         const col = LVC[e.level] || '#8ca0be';
         const ph = (this.t % 70) / 70;
+        /* 列表里选中的那一起：外面套两圈光环。同色小点常常挤成一片，
+           只把点画大一号是分不出来的，得有个明显不属于常态图元的东西。 */
+        const isHl = e.id === st.hlRisk;
+        if (isHl) {
+          c.beginPath(); c.arc(q[0], q[1], 21, 0, 7);
+          c.strokeStyle = col + '55'; c.lineWidth = 7; c.stroke();
+          c.beginPath(); c.arc(q[0], q[1], 14.5 + Math.sin(this.t / 7) * 2.2, 0, 7);
+          c.strokeStyle = '#fff'; c.lineWidth = 1.8; c.stroke();
+        }
         c.beginPath(); c.arc(q[0], q[1], 4 + ph * 8, 0, 7);
         c.strokeStyle = col + Math.round((1 - ph) * 170).toString(16).padStart(2, '0'); c.lineWidth = 1.2; c.stroke();
         c.strokeStyle = col; c.lineWidth = 1.6;
@@ -505,6 +546,18 @@
         } else {
           c.beginPath(); c.moveTo(q[0], q[1] - 4.2); c.lineTo(q[0] + 4.2, q[1]);
           c.lineTo(q[0], q[1] + 4.2); c.lineTo(q[0] - 4.2, q[1]); c.closePath(); c.stroke();
+        }
+        if (isHl) {
+          /* 标签贴编号后六位 —— 与列表里那个可点的编号是同一串，
+             用来确认"地图上亮的这个"就是"列表里点的那个"。 */
+          const tx = e.id.slice(-6);
+          c.font = '600 11px ui-monospace,Menlo,monospace';
+          const wd = c.measureText(tx).width + 12, bx = q[0] + 16, by = q[1] - 30;
+          c.fillStyle = 'rgba(4,18,28,.92)';
+          c.fillRect(bx, by, wd, 17);
+          c.strokeStyle = col; c.lineWidth = 1; c.strokeRect(bx, by, wd, 17);
+          c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'middle';
+          c.fillText(tx, bx + 6, by + 9);
         }
         (this._pickPts = this._pickPts || []).push({
           x: q[0], y: q[1], kind: 'hazard', data: e,
@@ -539,7 +592,21 @@
        是个死胡同（自动化早报过，用户现在亲自判了）。**删按钮必须连处理器一起删**，
        否则留下一个永远不会被触发的分支，下一个人还得判断它是不是漏了入口。 */
     U.on(view, '[data-fl]', 'click', (e, el) => {
-      if (el.dataset.fl === 'legal') location.hash = '#/legality';
+      if (el.dataset.fl !== 'legal') return;
+      /* 带着这条计划对应的感知目标跳过去，而不是光把页面打开。
+         计划→目标走数据层建立的 alignedPlanId，不用编号相近之类的猜法。
+         legality.js 的 render() 消费 U.goto 的上下文后会选中该目标、清筛选、
+         并翻到它所在那一页 —— 落地就是"已经点过那个目标"的样子。
+
+         15 条待执行计划里有 6 条没有对应目标（未起飞 / 探测盲区 / 设备异常）。
+         这时仍然跳转，但明说为什么没选中，不假装选中了某个不相干的目标 ——
+         与 search.js 里同类情形同一口径。 */
+      const p = st.sel;
+      const t = p && ((M.todayTargets || []).find(x => x.alignedPlanId === p.id)
+        || (M.allTargets || []).find(x => x.alignedPlanId === p.id));
+      if (t) return U.goto('legality', { target: t.id });
+      U.toast('该计划未匹配到感知目标，已跳转合法性判定，但无法自动选中对应目标');
+      location.hash = '#/legality';
     });
     document.getElementById('flKw').oninput = e => { st.kw = e.target.value.trim(); st.page = 1; paint(); };
 

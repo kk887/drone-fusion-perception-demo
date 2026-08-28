@@ -15,6 +15,19 @@
     return true;
   }
   const shownTargets = () => M.liveTargets.filter(matchFilter);
+  /* 点了「非实时」告警行后临时并进地图的那个历史目标 id。
+     只影响地图目标集，不进 sel、不参与筛选统计 —— 它不是"当前在跟踪的目标"。 */
+  let almFocus = null;
+  /* 列表里当前高亮的那一条告警 id。
+     **必须按告警 id 而不是目标 id** —— 一个目标可能有多条告警（如 UAV20260826035 有 2 条），
+     按目标 id 高亮会把它的每一条都点亮，看起来像点一下选中了两行。 */
+  let selAlarmId = null;
+  /* 地图上选中某目标时，列表里跟着高亮它最近的那条告警，保证任何时候都只亮一条 */
+  const latestAlarmIdOf = id => {
+    const as = shownAlarms().filter(a => a.targetId === id);
+    if (!as.length) return null;
+    return as.slice().sort((x, y) => (x.ts < y.ts ? 1 : x.ts > y.ts ? -1 : 0))[0].id;
+  };
   function shownAlarms() {
     const ids = new Set(shownTargets().map(t => t.id));
     return M.todayAlarms.filter(a => {
@@ -225,13 +238,24 @@
         '<div class="empty">当前筛选条件下无告警<div style="font-size:11.5px;margin-top:4px">可点击上方「清除」恢复全量</div></div>';
       return;
     }
-    document.getElementById('stAlarms').innerHTML = list.slice(0, 12).map(a => `
-      <div class="a lv-${a.level}" data-alm="${a.targetId}">
+    /* 告警列表是「今日全量」，而本页的地图、轨迹、融合面板一律以 liveTargets 为数据源。
+       两者口径不同：今日 24 条告警里有 14 条的目标早已离开实时跟踪窗口，
+       它们在这个页面上没有任何可显示的实时数据。原来这些行照常渲染、点了才弹
+       一句「查不到」——**一半的行是死的，而且事前看不出来**。
+       现在事前标「非实时」，点击改送告警事件页并选中该条（见 [data-alm] 处理器）。 */
+    document.getElementById('stAlarms').innerHTML = list.slice(0, 12).map(a => {
+      const live = M.liveTargets.some(t => t.id === a.targetId);
+      return `
+      <div class="a lv-${a.level}${live ? '' : ' hist'}" data-alm="${a.targetId}" data-alm-id="${a.id}"
+        title="${live ? '点击：在地图上跟踪该目标' : '该目标已离开实时跟踪窗口 —— 点击在地图上定位其告警发生时位置'}"
+        ${a.id === selAlarmId
+        ? 'style="border:1px solid var(--cyan);background:rgba(34,211,238,.08)"' : ''}>
         <div class="r1"><span class="id">${a.targetId}</span>${U.tag(a.type)}
           ${U.tag(a.level === '高' ? '高风险' : a.level === '中' ? '中风险' : '低风险')}
           <span style="margin-left:auto" class="mono" style="color:var(--txt-3)">${a.time.slice(11)}</span></div>
-        <div class="r2"><span>${a.district}</span><span>${U.tag(a.status)}</span></div>
-      </div>`).join('');
+        <div class="r2"><span>${a.district}</span>
+          <span>${live ? '' : '<span class="hist-tag" title="目标已离开实时跟踪窗口">非实时</span>'}${U.tag(a.status)}</span></div>
+      </div>`; }).join('');
   }
 
   /* ---- 反制授权弹窗（修正原型"一键反制"绕过授权的问题） ---- */
@@ -454,11 +478,29 @@
       maxDev: 46, maxAlarm: 6, zoom: 1.06, legend: false,   // 图例已并入图层浮层，避免地图上两个框重复
 
       onPick: p => {
-        if (p.kind === 'target') { sel = M.liveTargets.find(t => t.id === p.data.id) || sel; refresh(); }
+        if (p.kind === 'target') {
+          sel = M.liveTargets.find(t => t.id === p.data.id) || sel;
+          almFocus = null;
+          selAlarmId = latestAlarmIdOf(sel.id);   // 列表侧跟着走，始终只亮一条
+          refresh();
+        }
       }
     });
+    /* 跨页承接（综合态势点告警点位下钻）：带 target 上下文进来就选中它并移到地图中心。
+       走 U.goto/U.consume 既有通路，与 legality/punish/risk 的用法一致。 */
+    const ctx = U.consume('situation');
+    if (ctx && ctx.target) {
+      const t = M.liveTargets.find(x => x.id === ctx.target);
+      if (t) sel = t;
+      else U.toast('该目标已脱离实时跟踪窗口，已显示当前追踪目标');
+    }
     applyFilter();      // 依当前筛选装载地图/告警/目标
     map.sel = sel.id;
+    selAlarmId = latestAlarmIdOf(sel.id);   // 初始高亮与地图默认选中的目标对齐
+    if (ctx && ctx.target && map.w) {
+      const q = map.px(sel.lon, sel.lat);
+      map.ox += map.w / 2 - q[0]; map.oy += map.h / 2 - q[1];
+    }
     refresh();
 
     // 图层控制浮层(从工具条移入地图右上角,腾出纵向空间)
@@ -484,26 +526,72 @@
     document.getElementById('stMap').appendChild(lyBox);
     U.on(view, '[data-layer]', 'change', (e, el) => map.setLayer(el.dataset.layer, el.checked));
     U.on(view, '[data-alm]', 'click', (e, el) => {
+      selAlarmId = el.dataset.almId;      // 点哪条亮哪条，与目标有几条告警无关
       const t = M.liveTargets.find(x => x.id === el.dataset.alm);
-      if (t) { sel = t; map.sel = t.id; refresh(); }
-      else U.toast('该告警目标已脱离实时跟踪窗口，可在「异常告警中心」查看历史详情');
+      if (t) {
+        almFocus = null;                  // 切回实时目标，撤掉临时并入的历史点
+        applyFilter();
+        sel = t; map.sel = t.id;
+        /* 高亮（脉冲圈+轨迹）只在画布内才看得见：选中即把目标移到地图中心 */
+        if (map.w) { const q = map.px(t.lon, t.lat); map.ox += map.w / 2 - q[0]; map.oy += map.h / 2 - q[1]; }
+        refresh();
+      }
+      else {
+        /* 目标已离开实时跟踪窗口：liveTargets 里没有它，但 todayTargets 里有，
+           **经纬度是全的**，缺的只是 track / fused / trackId 这些实时跟踪才有的字段。
+           MapView 画目标时没有轨迹会回落到 {lon,lat} 单点，选中态照常渲染 ——
+           所以这里把它临时并进地图的目标集，而不是把人打发去别的页面。
+
+           右侧「当前追踪目标」面板**故意不动**：那块的融合置信度、多路来源、
+           轨迹点数都只有实时目标才有，把一个历史目标塞进去就得凭空编这些字段。
+           面板标题写的是「当前追踪目标」，它也确实不在跟踪中。 */
+        const ht = (M.todayTargets || []).find(x => x.id === el.dataset.alm)
+          || (M.allTargets || []).find(x => x.id === el.dataset.alm);
+        if (!ht) return U.toast('该告警未关联到可定位的目标记录', 'err');
+        almFocus = ht.id;
+        applyFilter();                    // 把它并进地图目标集
+        map.sel = ht.id;
+        if (map.w && ht.lon != null) {
+          const q = map.px(ht.lon, ht.lat);
+          map.ox += map.w / 2 - q[0]; map.oy += map.h / 2 - q[1];
+        }
+        refresh();
+        U.toast('已在地图定位 ' + ht.id + '（该目标已离开实时跟踪窗口，显示为告警发生时位置）');
+      }
     });
     // 筛选：改下拉即时生效（地图、告警列表、当前目标三处同步）
     U.on(view, '[data-f]', 'change', (e, el) => {
       if (flt[el.dataset.f] === undefined) return;      // 只处理顶部筛选条的四个下拉
       flt[el.dataset.f] = el.value;
+      almFocus = null;                    // 换了筛选条件，上一个历史聚焦点不再有上下文
+      selAlarmId = null;                  // 高亮的那条可能已被筛掉，别留一个指不到行的 id
       applyFilter(); refresh();
     });
     document.getElementById('btnTech').onclick = techDrawer;
   }
 
+  /* 该目标关联的告警。**按是否真有告警记录决定按钮出不出现**，不按 legal 字段猜 ——
+     legal 有「非法/异常/待确认/不适用」四种取值，哪几种一定有告警是数据层的事，
+     在这儿写死一份判断，数据一改这里就开始骗人。 */
+  const alarmsOf = id => (M.alarms || []).filter(a => a.targetId === id);
+
   function paintActions() {
     const t = sel, isUav = t.type === '无人机';
+    const alms = alarmsOf(t.id);
+    /* 跳转取最近一条：一个目标可能有多条告警（如 UAV20260826035 有 2 条），
+       落到最新那条最符合「这个目标现在怎么了」的问法。 */
+    const latest = alms.length
+      ? alms.slice().sort((x, y) => (x.ts < y.ts ? 1 : x.ts > y.ts ? -1 : 0))[0] : null;
+    const almBtn = latest
+      ? `<button class="btn warn" id="btnAlm" style="flex:1;justify-content:center"
+           title="转到「告警事件」并定位到 ${latest.id}">⚠ 查看告警${alms.length > 1 ? '（' + alms.length + ' 条）' : ''} →</button>`
+      : '';
     document.getElementById('stAct').innerHTML = isUav
       ? `
          <div style="display:flex;gap:8px;margin-top:8px">
            <button class="btn" id="btnVideo" style="flex:1;justify-content:center">${U.icon('video')} 实时视频</button>
            <button class="btn" id="btnReplay" style="flex:1;justify-content:center">轨迹回放</button>
+           ${almBtn}
          </div>`
       : `<button class="btn big" style="width:100%;justify-content:center" disabled title="非无人机目标不进入反制流程">
            ${U.icon('bolt')} 发起联动反制（不适用）</button>
@@ -520,6 +608,14 @@
   function bindActions(isUav) {
     const g2 = id => document.getElementById(id);
     g2('btnVideo').onclick = () => videoModal(sel);
+    /* 与告警列表里那条「非实时」通路走同一个约定，落点一致 */
+    const almEl = g2('btnAlm');
+    if (almEl) almEl.onclick = () => {
+      const a = alarmsOf(sel.id).slice().sort((x, y) => (x.ts < y.ts ? 1 : x.ts > y.ts ? -1 : 0))[0];
+      if (!a) return U.toast('该目标暂无关联告警记录', 'err');
+      sessionStorage.setItem('alarm.sel', a.id);
+      location.hash = '#/alarms';
+    };
     if (isUav) {
       g2('btnReplay').onclick = () => replayModal(sel);
     } else {
@@ -742,10 +838,19 @@
 
   function applyFilter() {
     const ts = shownTargets(), as = shownAlarms();
+    /* 地图目标集 = 筛选后的实时目标 + （若有）被点中的那个历史目标。
+       单独一份 mapTargets，不动 ts —— 下面的「目标 N/M」计数和 sel 兜底都用 ts，
+       把历史目标混进去会让计数多出一个并不在跟踪的目标。 */
+    let mapTargets = ts;
+    if (almFocus && !ts.some(t => t.id === almFocus)) {
+      const ht = (M.todayTargets || []).find(x => x.id === almFocus)
+        || (M.allTargets || []).find(x => x.id === almFocus);
+      if (ht) mapTargets = ts.concat([ht]);
+    }
     if (map) map.setData({
       airspaces: M.airspaces,
       devices: M.devices.filter((d, i) => i % 4 === 0),
-      targets: ts, alarms: as
+      targets: mapTargets, alarms: as
     });
     if (ts.length && !ts.some(t => t.id === sel.id)) { sel = ts[0]; if (map) map.sel = sel.id; }
     paintAlarms();

@@ -209,6 +209,8 @@
     ]
   });
 
+/* 数据来源横幅 modeBar 已按用户裁定整体删除（连同其模式说明注释） */
+
   /* ---------------- 页面 ---------------- */
   /* =========================================================================
    * 表头排序
@@ -261,6 +263,8 @@
     const dash = v => D.total ? v : '—';
     st.sel = (st.sel && all.find(d => d.id === st.sel.id)) || all[0] || null;
     const noData = !D.total;
+    /* 数据来源横幅（modeBar）已按用户裁定删除：切换数据源/留痕/回放帧控均不再展示。
+       DS 状态机与 Adapter 取数逻辑保留（页面取数仍走它，默认 mock），只撤 UI。 */
     return `${U.kpis([
       { label: '设备总数', value: dash(U.num(D.total)), color: 'blue', icon: 'device', desc: noData ? '正式接口未连通' : '在线 + 离线 + 异常' },
       { label: '在线数', value: dash(U.num(D.online)), color: 'green', icon: 'check', desc: noData ? '—' : `在线率 ${D.onlineRate}%` },
@@ -272,7 +276,8 @@
 
     <div class="row" style="margin-top:12px;height:calc(100vh - 284px);min-height:608px;padding-bottom:12px">
       ${U.panel({
-      title: '设备管理', style: 'flex:1', nopad: true,
+      /* 用户裁定（2026-08-27）：左右按 6:4 分宽（与告警、处置处罚同口径） */
+      title: '设备管理', style: 'flex:6;min-width:0', nopad: true,
       sub: DS.mode === 'mock' ? '模拟数据源 · 非真实感知结果'
         : DS.mode === 'replay' ? '回放 · 原始录制时间 ' + snapKey() + ' · 只读'
           : '实时 · 正式接口' + (probeOk() ? '已连通' : '未连通'),
@@ -289,7 +294,7 @@
         <div id="dvList" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`
     })}
       ${U.panel({
-      title: '设备详情预览', style: 'width:560px',
+      title: '设备详情预览', style: 'flex:4;min-width:0',
       extra: `<span class="lnk" id="dvGoMon">实时监测 ›</span>`,
       nopad: true, bodyStyle: 'padding:0;display:flex;flex-direction:column',
       body: `<div id="dvDetail" style="flex:1;overflow:auto"></div>`
@@ -446,6 +451,7 @@
     document.getElementById('dvExp').onclick = () => U.toast(`已导出「设备台账.xlsx」共 ${filtered().length} 条（数据源：${MODES[DS.mode].name}${DS.mode === 'replay' ? ' @ ' + snapKey() : ''}）`, 'ok');
     document.getElementById('dvGoMon').onclick = () => location.hash = '#/monitor';
 
+    /* B7 数据源切换的横幅 UI 已删（modeBar），其按钮绑定一并移除 */
   }
 
   /* ---- 留痕：追加一条记录（只增不改） ---- */

@@ -46,7 +46,7 @@
       ${U.panel({
       title: '东营区域实时态势', sub: '四路融合', style: 'flex:1',
       nopad: true, bodyStyle: 'padding:8px',
-      extra: `<span style="font-size:12.5px;color:var(--txt-3)">点击地图上的目标查看实时态势</span>
+      extra: `<span style="font-size:12.5px;color:var(--txt-3)">点击告警点位下钻到融合感知</span>
               <button class="btn ghost" onclick="location.hash='#/situation'">融合感知 →</button>`,
       body: `<div id="ovMap" style="width:100%;height:100%"></div>`
     })}
@@ -56,46 +56,12 @@
       bodyStyle: 'padding:12px;overflow:auto',
       body: `<div class="focus">${focusCards()}</div>`
     })}
-    </div>
-    <div class="row" style="flex:none;height:186px">
-      ${U.panel({
-      title: '今日业务闭环', sub: '发现 → 研判 → 告警 → 处置 → 归档', style: 'flex:1.55',
-      extra: `<span class="lnk" onclick="location.hash='#/stats'">运行统计 ›</span>`,
-      body: `<div class="loop">${loopHtml()}</div>
-        <div style="margin-top:12px;font-size:12.5px;color:var(--txt-3);line-height:1.7">
-          闭环率 <b style="color:#79e5a5;font-size:14px">${U.pct(C.closed, C.alarmed)}</b>
-          （已办结 / 今日告警）· 平均响应 <b style="color:#8fbaff;font-size:14px">${avgRespond()}</b>
-          <span style="color:var(--txt-3)">（告警触发至人工核实完成）</span></div>`
-    })}
-      ${U.panel({
-      title: '近 7 天告警趋势', style: 'flex:1',
-      body: `<div id="ovTrend" class="chart" style="height:100%"></div>`
-    })}
     </div></div>`;
+    /* 底部行（今日业务闭环 / 近7天告警趋势）已按用户裁定整行删除，
+       上方「实时态势 + 重点事件」行是 flex:1，自动占满腾出的高度。 */
   }
 
-  /* 平均响应时间从案件环节时间戳算出来，不写常数：
-     首页写一个"6.4 分钟"，甲方追问口径时答不上来 —— 而这个数正是他们最会追问的一个。
-     口径：已完成「人工核实」的案件，steps[0] 告警触发 → steps[1] 人工核实 的时间差。 */
-  function avgRespond() {
-    const ts = t => t && t !== '待处理' ? new Date(t.replace(/-/g, '/')).getTime() : null;
-    const gaps = M.cases.map(c => {
-      const a = ts((c.steps[0] || {}).t), b = ts((c.steps[1] || {}).t);
-      return a && b && b > a ? (b - a) / 60000 : null;
-    }).filter(x => x != null);
-    if (!gaps.length) return '暂无样本';
-    const m = gaps.reduce((s2, x) => s2 + x, 0) / gaps.length;
-    return (m < 60 ? m.toFixed(1) + ' 分钟' : (m / 60).toFixed(1) + ' 小时') + ` <span style="font-size:11.5px;color:var(--txt-3)">（${gaps.length} 件）</span>`;
-  }
-
-  function loopHtml() {
-    return EVT.loop().map((x, i) => {
-      const c = ['#8fbaff', '#79e6f6', '#ffd07a', '#ffb083', '#79e5a5'][i];
-      return `<div class="lp"><span class="n">${x.n}</span>
-        <span class="v" style="color:${c}">${U.num(x.v)}</span>
-        <span class="s">${x.s}</span></div>`;
-    }).join('');
-  }
+  /* loopHtml 与 avgRespond 已随「今日业务闭环」面板删除 */
 
   function focusCards() {
     return EVT.focus(4).map(a => {
@@ -114,13 +80,14 @@
   }
 
   function mount(view) {
-    const S = M.todayStats;
+    /* 差异化分工（用户裁定 2026-08-27）：本页是指挥总览，不做单目标细节 ——
+       track 图层整体关掉（不画目标图标与轨迹），只留设备覆盖、空域、告警点位；
+       单目标追踪/处置归融合感知，点告警点位带目标上下文下钻过去。 */
     map = new MapView(document.getElementById('ovMap'), {
-      maxDev: 32, maxAlarm: 4, zoom: 1.06,
-      showAirspaceLabels: false, showTargetLabels: false,
+      maxDev: 32, maxAlarm: 4, zoom: 1.06, layers: { track: false },
+      showAirspaceLabels: false,
       onPick: p => {
-        if (p.kind === 'target') location.hash = '#/situation';
-        else if (p.kind === 'alarm') location.hash = '#/alarms';
+        if (p.kind === 'alarm') { U.goto('situation', { target: p.data.targetId }); location.hash = '#/situation'; }
         else if (p.kind === 'device') location.hash = '#/devices';
         else if (p.kind === 'airspace') location.hash = '#/airspace';
       }
@@ -128,14 +95,6 @@
     map.setData({
       airspaces: M.airspaces, devices: M.devices.filter((d, i) => i % 12 === 0),
       targets: M.liveTargets.slice(0, 6), alarms: EVT.focus(4)
-    });
-
-    CH.line(document.getElementById('ovTrend'), {
-      x: S.alarmTrend.map(t => t.date),
-      series: [
-        { name: '告警总数', data: S.alarmTrend.map(t => t.total), color: CH.C.blue, area: true, label: true },
-        { name: '高风险', data: S.alarmTrend.map(t => t.high), color: CH.C.red, label: true }
-      ]
     });
 
     U.on(view, '[data-ev]', 'click', () => { location.hash = '#/alarms'; });
